@@ -1,0 +1,5 @@
+- Can drag MJML blocks; device toggles work.
+- New/Open/Save local projects; survive reloads.
+- Import/Export: .mjml, .html, .json; HTML opens offline.
+- Templates load instantly with embedded assets.
+- Outlook 365 OWA, Desktop, Mac, iOS: layout parity for included templates.
