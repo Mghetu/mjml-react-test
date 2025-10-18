@@ -13,6 +13,7 @@
     "@grapesjs/react": "^2.0.0",
     "grapesjs": "^0.22.13",
     "grapesjs-mjml": "^1.0.7",
+    "lucide-react": "^0.546.0",
     "mjml-browser": "^4.16.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
