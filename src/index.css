@@ -1,3 +1,5 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+/* optional: subtle background for canvas area */
+.gjs-cv-canvas { background: #f3f4f6; }
