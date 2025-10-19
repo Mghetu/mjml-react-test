@@ -1,5 +1,6 @@
 // src/editor/ui/LeftSidebar.tsx
-import React, { useState } from 'react';
+import { useState } from 'react';
+
 import BlocksPanel from './BlocksPanel';
 import LayersPanel from './LayersPanel';
 
@@ -7,33 +8,33 @@ export default function LeftSidebar() {
   const [activeTab, setActiveTab] = useState<'blocks' | 'layers'>('blocks');
 
   return (
-    <aside className="h-full w-64 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col">
-      {/* Tabs Header */}
-      <div className="flex border-b border-zinc-200 dark:border-zinc-800">
+    <aside className="mjml-left">
+      <header className="mjml-panel-header">
+        <h2 className="mjml-panel-heading">Navigator</h2>
+      </header>
+
+      <nav className="mjml-panel-tabs" aria-label="Left sidebar tabs" role="tablist">
         <button
-          className={`flex-1 py-2 text-sm font-medium ${
-            activeTab === 'blocks'
-              ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100'
-              : 'hover:bg-zinc-50 dark:hover:bg-zinc-900 text-zinc-500'
-          }`}
+          type="button"
+          className={`mjml-panel-tab ${activeTab === 'blocks' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('blocks')}
+          role="tab"
+          aria-selected={activeTab === 'blocks'}
         >
           Blocks
         </button>
         <button
-          className={`flex-1 py-2 text-sm font-medium ${
-            activeTab === 'layers'
-              ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100'
-              : 'hover:bg-zinc-50 dark:hover:bg-zinc-900 text-zinc-500'
-          }`}
+          type="button"
+          className={`mjml-panel-tab ${activeTab === 'layers' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('layers')}
+          role="tab"
+          aria-selected={activeTab === 'layers'}
         >
           Layers
         </button>
-      </div>
+      </nav>
 
-      {/* Panel Content */}
-      <div className="flex-1 overflow-auto">
+      <div className="mjml-panel-scroll" role="tabpanel" aria-live="polite">
         {activeTab === 'blocks' && <BlocksPanel />}
         {activeTab === 'layers' && <LayersPanel />}
       </div>
