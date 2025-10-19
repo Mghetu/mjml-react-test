@@ -1,8 +1,8 @@
 // src/components/right/LayersPanel.tsx
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { WithEditor, useEditor } from '@grapesjs/react';
 import type { Editor, Component } from 'grapesjs';
-import { Eye, EyeOff, Lock, Unlock, Trash2 } from 'lucide-react';
+import { Eye, EyeOff, Lock, Unlock, Trash2 } from './icons';
 
 type Node = {
   id: string;
@@ -11,13 +11,34 @@ type Node = {
   children: Node[];
 };
 
+function getComponentLabel(cmp: Component) {
+  const explicitName = typeof cmp.getName === 'function' ? cmp.getName() : '';
+  if (explicitName) return explicitName;
+
+  const type = cmp.get('type') as string | undefined;
+  if (type) return type;
+
+  const tag = (cmp.get('tagName') as string | undefined) ?? (cmp as unknown as { tagName?: string }).tagName;
+  if (tag) return tag;
+
+  return cmp.getId();
+}
+
 function buildTree(root: Component): Node {
-  const mk = (cmp: Component): Node => ({
-    id: cmp.getId(),
-    name: cmp.getName ? cmp.getName() || cmp.get('type') || cmp.getTagName() : cmp.get('type') || cmp.getTagName(),
-    cmp,
-    children: (cmp.components() as Component[]).map(mk),
-  });
+  const mk = (cmp: Component): Node => {
+    const children: Node[] = [];
+    cmp.components().forEach((child: Component) => {
+      children.push(mk(child));
+    });
+
+    return {
+      id: cmp.getId(),
+      name: getComponentLabel(cmp),
+      cmp,
+      children,
+    };
+  };
+
   return mk(root);
 }
 
@@ -26,6 +47,7 @@ function useLayerTree(editor: Editor) {
 
   const refresh = useCallback(() => {
     const wrapper = editor.getWrapper();
+    if (!wrapper) return;
     setTree(buildTree(wrapper));
   }, [editor]);
 
@@ -73,50 +95,47 @@ function Row({
   };
 
   return (
-    <div className={`flex flex-col`}>
+    <div className="mjml-layer">
       <div
-        className={`group flex items-center justify-between rounded-lg px-2 py-1 cursor-pointer
-          ${isSelected ? 'bg-zinc-200 dark:bg-zinc-800' : 'hover:bg-zinc-100 dark:hover:bg-zinc-900'}`}
+        className={`mjml-layer__row ${isSelected ? 'is-active' : ''}`}
         onClick={onSelect}
         title={node.name}
+        role="button"
       >
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-zinc-400 select-none" style={{ paddingLeft: level * 12 }}>
-            {level > 0 ? '↳' : ''}
-          </span>
-          <span className="text-sm truncate">{node.name}</span>
+        <div className="mjml-layer__meta" style={{ marginLeft: level * 12 }}>
+          <span className="mjml-layer__name">{node.name}</span>
         </div>
-        <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+        <div className="mjml-layer__actions">
           <button
-            className="p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700"
+            className="mjml-layer__action"
             onClick={e => {
               e.stopPropagation();
               onToggleVisible();
             }}
-            aria-label={isVisible ? 'Hide' : 'Show'}
-            title={isVisible ? 'Hide' : 'Show'}
+            aria-label={isVisible ? 'Hide element' : 'Show element'}
+            title={isVisible ? 'Hide element' : 'Show element'}
           >
             {isVisible ? <Eye size={16} /> : <EyeOff size={16} />}
           </button>
           <button
-            className="p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700"
+            className="mjml-layer__action"
             onClick={e => {
               e.stopPropagation();
               onToggleLocked();
             }}
-            aria-label={isLocked ? 'Unlock' : 'Lock'}
-            title={isLocked ? 'Unlock' : 'Lock'}
+            aria-label={isLocked ? 'Unlock element' : 'Lock element'}
+            title={isLocked ? 'Unlock element' : 'Lock element'}
           >
             {isLocked ? <Unlock size={16} /> : <Lock size={16} />}
           </button>
           <button
-            className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30"
+            className="mjml-layer__action mjml-layer__action--danger"
             onClick={e => {
               e.stopPropagation();
               onDelete();
             }}
-            aria-label="Delete"
-            title="Delete"
+            aria-label="Delete element"
+            title="Delete element"
           >
             <Trash2 size={16} />
           </button>
@@ -124,7 +143,7 @@ function Row({
       </div>
 
       {node.children.length > 0 && (
-        <div className="flex flex-col">
+        <div className="mjml-layer__children">
           {node.children.map(child => (
             <Row key={child.id} node={child} level={level + 1} editor={editor} selectedId={selectedId} />
           ))}
@@ -137,14 +156,14 @@ function Row({
 function LayersInner() {
   const editor = useEditor();
   const { tree } = useLayerTree(editor);
-  const selectedId = useMemo(() => editor.getSelected()?.getId(), [editor, editor.getSelected()]);
+  const selectedId = editor.getSelected()?.getId();
 
   if (!tree) {
-    return <div className="text-sm text-zinc-500 p-2">No content</div>;
+    return <div className="mjml-panel-empty">No content yet</div>;
   }
 
   return (
-    <div className="h-full overflow-auto p-2 space-y-1">
+    <div className="mjml-panel-content mjml-panel-content--padded">
       <Row node={tree} level={0} editor={editor} selectedId={selectedId} />
     </div>
   );

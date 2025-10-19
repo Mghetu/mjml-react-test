@@ -7,8 +7,6 @@ import Topbar from './ui/Topbar';
 import LeftSidebar from './ui/LeftSidebar';
 import RightSidebar from './ui/RightSidebar';
 
-import { ensureSkeleton } from './utils/mjml';
-
 import 'grapesjs/dist/css/grapes.min.css';
 import './editor.css';
 
@@ -94,9 +92,10 @@ export default function Editor() {
             }
 
             // 4) Select something so Traits/Styles populate
-            const first =
-              editor.getWrapper().find("mj-text")?.[0] ??
-              editor.getWrapper().find("*")?.[0];
+            const wrapper = editor.getWrapper();
+            if (!wrapper) return;
+
+            const first = wrapper.find("mj-text")[0] ?? wrapper.find("*")[0];
             if (first) editor.select(first);
 
             // 5) Device + refresh to recalc sizes

@@ -5,43 +5,73 @@ export default function RightSidebar() {
   const editor = useEditorMaybe();
   const [tab, setTab] = useState<'traits' | 'styles'>('traits');
 
-useEffect(() => {
-  if (!editor) return;
+  useEffect(() => {
+    if (!editor) return;
 
-  if (tab === 'traits') {
-    // If nothing is selected, select the first mj-text or any component
-    const sel = editor.getSelected?.();
-    if (!sel) {
-      const first =
-        editor.getWrapper().find('mj-text')?.[0] ??
-        editor.getWrapper().find('*')?.[0];
+    const ensureSelection = () => {
+      const sel = editor.getSelected?.();
+      if (sel) return;
+
+      const wrapper = editor.getWrapper();
+      if (!wrapper) return;
+
+      const candidates = wrapper.find('mj-text');
+      const fallback = wrapper.find('*');
+      const first = candidates[0] ?? fallback[0];
+
       if (first) editor.select(first);
-    }
-    editor.runCommand('open-traits');
-  }
+    };
 
-  if (tab === 'styles') {
-    const sel = editor.getSelected?.();
-    if (!sel) {
-      const first =
-        editor.getWrapper().find('mj-text')?.[0] ??
-        editor.getWrapper().find('*')?.[0];
-      if (first) editor.select(first);
+    if (tab === 'traits') {
+      ensureSelection();
+      editor.runCommand('open-traits');
     }
-    editor.runCommand('open-styles');
-  }
-}, [tab, editor]);
 
+    if (tab === 'styles') {
+      ensureSelection();
+      editor.runCommand('open-styles');
+    }
+  }, [tab, editor]);
 
   return (
     <aside className="mjml-right">
-      <div className="mjml-panel-title">
-        <button className={tab === 'traits' ? 'active' : ''} onClick={() => setTab('traits')}>Traits</button>
-        <button className={tab === 'styles' ? 'active' : ''} onClick={() => setTab('styles')}>Styles</button>
-      </div>
-      <div className="mjml-panel-body" style={{ height: '100%', overflow: 'auto' }}>
-        <div id="mjml-traits" style={{ display: tab === 'traits' ? 'block' : 'none' }} />
-        <div id="mjml-styles" style={{ display: tab === 'styles' ? 'block' : 'none' }} />
+      <header className="mjml-panel-header">
+        <h2 className="mjml-panel-heading">Inspector</h2>
+      </header>
+      <nav className="mjml-panel-tabs" aria-label="Inspector tabs" role="tablist">
+        <button
+          type="button"
+          className={`mjml-panel-tab ${tab === 'traits' ? 'is-active' : ''}`}
+          onClick={() => setTab('traits')}
+          role="tab"
+          aria-selected={tab === 'traits'}
+        >
+          Traits
+        </button>
+        <button
+          type="button"
+          className={`mjml-panel-tab ${tab === 'styles' ? 'is-active' : ''}`}
+          onClick={() => setTab('styles')}
+          role="tab"
+          aria-selected={tab === 'styles'}
+        >
+          Styles
+        </button>
+      </nav>
+
+      <div className="mjml-panel-scroll">
+        <div
+          className={`mjml-panel-stack ${tab === 'traits' ? 'is-active' : ''}`}
+          id="mjml-traits"
+          role="tabpanel"
+          aria-hidden={tab !== 'traits'}
+        />
+        <div
+          className={`mjml-panel-stack ${tab === 'styles' ? 'is-active' : ''}`}
+          id="mjml-styles"
+          role="tabpanel"
+          aria-hidden={tab !== 'styles'}
+        />
       </div>
     </aside>
   );
