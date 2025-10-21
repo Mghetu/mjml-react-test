@@ -27,7 +27,7 @@ export default function Topbar() {
   };
 
   return (
-    <div className="topbar">
+    <div className="topbar gjs-one-bg gjs-two-color">
       <div className="topbar-section">
         <h1 className="editor-title">MJML Email Editor</h1>
       </div>
