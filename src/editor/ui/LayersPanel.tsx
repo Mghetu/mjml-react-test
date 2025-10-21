@@ -1,4 +1,4 @@
-// src/components/right/LayersPanel.tsx
+// src/editor/ui/LayersPanel.tsx
 import { useEffect, useState, useCallback } from 'react';
 import { WithEditor, useEditor } from '@grapesjs/react';
 import type { Editor, Component } from 'grapesjs';
@@ -52,10 +52,8 @@ function useLayerTree(editor: Editor) {
   }, [editor]);
 
   useEffect(() => {
-    // Initial build
     refresh();
 
-    // Update on relevant events
     const evts = [
       'layer:root',
       'layer:component',
@@ -82,7 +80,7 @@ function Row({
   editor: Editor;
   selectedId?: string;
 }) {
-  const lm = editor.Layers; // Layer Manager API
+  const lm = editor.Layers;
   const isVisible = lm.isVisible(node.cmp);
   const isLocked = lm.isLocked(node.cmp);
   const isSelected = selectedId === node.id;
@@ -95,19 +93,23 @@ function Row({
   };
 
   return (
-    <div className="mjml-layer">
+    <div className="flex flex-col gap-1">
       <div
-        className={`mjml-layer__row ${isSelected ? 'is-active' : ''}`}
+        className={`flex items-center justify-between px-2 py-1.5 rounded cursor-pointer transition-colors ${
+          isSelected
+            ? 'bg-blue-100 border border-blue-400'
+            : 'bg-gray-50 border border-transparent hover:bg-gray-100 hover:border-gray-300'
+        }`}
         onClick={onSelect}
         title={node.name}
         role="button"
       >
-        <div className="mjml-layer__meta" style={{ marginLeft: level * 12 }}>
-          <span className="mjml-layer__name">{node.name}</span>
+        <div className="flex items-center gap-2 text-gray-900 text-xs font-medium" style={{ marginLeft: level * 12 }}>
+          <span className="max-w-[180px] truncate">{node.name}</span>
         </div>
-        <div className="mjml-layer__actions">
+        <div className="flex items-center gap-1">
           <button
-            className="mjml-layer__action"
+            className="p-1 rounded text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
             onClick={e => {
               e.stopPropagation();
               onToggleVisible();
@@ -115,10 +117,10 @@ function Row({
             aria-label={isVisible ? 'Hide element' : 'Show element'}
             title={isVisible ? 'Hide element' : 'Show element'}
           >
-            {isVisible ? <Eye size={16} /> : <EyeOff size={16} />}
+            {isVisible ? <Eye size={14} /> : <EyeOff size={14} />}
           </button>
           <button
-            className="mjml-layer__action"
+            className="p-1 rounded text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
             onClick={e => {
               e.stopPropagation();
               onToggleLocked();
@@ -126,10 +128,10 @@ function Row({
             aria-label={isLocked ? 'Unlock element' : 'Lock element'}
             title={isLocked ? 'Unlock element' : 'Lock element'}
           >
-            {isLocked ? <Unlock size={16} /> : <Lock size={16} />}
+            {isLocked ? <Unlock size={14} /> : <Lock size={14} />}
           </button>
           <button
-            className="mjml-layer__action mjml-layer__action--danger"
+            className="p-1 rounded text-gray-600 hover:bg-red-100 hover:text-red-600 transition-colors"
             onClick={e => {
               e.stopPropagation();
               onDelete();
@@ -137,13 +139,13 @@ function Row({
             aria-label="Delete element"
             title="Delete element"
           >
-            <Trash2 size={16} />
+            <Trash2 size={14} />
           </button>
         </div>
       </div>
 
       {node.children.length > 0 && (
-        <div className="mjml-layer__children">
+        <div className="flex flex-col gap-1 mt-1 pl-3.5 border-l border-gray-300">
           {node.children.map(child => (
             <Row key={child.id} node={child} level={level + 1} editor={editor} selectedId={selectedId} />
           ))}
@@ -159,11 +161,11 @@ function LayersInner() {
   const selectedId = editor.getSelected()?.getId();
 
   if (!tree) {
-    return <div className="mjml-panel-empty">No content yet</div>;
+    return <div className="p-5 text-xs text-gray-500 text-center tracking-wide uppercase">No content yet</div>;
   }
 
   return (
-    <div className="mjml-panel-content mjml-panel-content--padded">
+    <div className="p-3 flex flex-col gap-1">
       <Row node={tree} level={0} editor={editor} selectedId={selectedId} />
     </div>
   );

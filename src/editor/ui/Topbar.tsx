@@ -1,6 +1,5 @@
 // src/editor/ui/Topbar.tsx
 import { useEffect, useState } from 'react';
-
 import {
   Blocks,
   Code,
@@ -16,7 +15,6 @@ import {
   Trash2,
   Undo2,
 } from './icons';
-
 import { useEditorMaybe } from '../hooks/useEditorSafe';
 
 export default function Topbar() {
@@ -34,7 +32,6 @@ export default function Topbar() {
     };
   }, [editor]);
 
-  // Helpers to run GrapesJS commands safely
   const run = (cmd: string) => editor?.runCommand(cmd);
 
   const DeviceIcon = {
@@ -63,14 +60,14 @@ export default function Topbar() {
   ];
 
   return (
-    <div className="mjml-topbar">
-      <div className="mjml-topbar__section mjml-topbar__section--left">
-        <span className="mjml-topbar__brand">MJML Studio</span>
-        <span className="mjml-topbar__subtitle">powered by GrapesJS</span>
+    <div className="flex items-center justify-between gap-3 px-4 h-12 bg-gray-800 border-b border-gray-900 text-gray-100">
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <span className="font-semibold tracking-wider text-sm uppercase">MJML Studio</span>
+        <span className="text-xs opacity-65 tracking-wider uppercase">powered by GrapesJS</span>
       </div>
 
-      <div className="mjml-topbar__section mjml-topbar__section--center">
-        <div className="mjml-topbar__group mjml-topbar__group--devices" role="group" aria-label="Device preview">
+      <div className="flex items-center justify-center flex-1">
+        <div className="inline-flex items-center gap-1 p-0.5 rounded bg-gray-700 border border-gray-900" role="group" aria-label="Device preview">
           {devices.map(({ id, label }) => {
             const Icon = DeviceIcon[id];
             const isActive = activeDevice === id;
@@ -78,8 +75,11 @@ export default function Topbar() {
               <button
                 key={id}
                 type="button"
-                className="mjml-topbar__button"
-                data-active={isActive ? 'true' : undefined}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                  isActive
+                    ? 'bg-gray-600 text-white'
+                    : 'bg-transparent text-gray-300 hover:bg-gray-600/50 hover:text-white'
+                }`}
                 aria-pressed={isActive}
                 disabled={disabled}
                 onClick={() => editor?.setDevice(id)}
@@ -92,23 +92,20 @@ export default function Topbar() {
         </div>
       </div>
 
-      <div className="mjml-topbar__section mjml-topbar__section--right">
-        <div className="mjml-topbar__group mjml-topbar__group--dense" role="group" aria-label="Editor utilities">
-          {utilities.map(({ icon: Icon, label, onClick }) => (
-            <button
-              key={label}
-              type="button"
-              className="mjml-topbar__button"
-              title={label}
-              aria-label={label}
-              disabled={disabled}
-              onClick={onClick}
-            >
-              <Icon size={16} aria-hidden="true" />
-              <span>{label}</span>
-            </button>
-          ))}
-        </div>
+      <div className="flex items-center justify-end gap-0.5 flex-1" role="group" aria-label="Editor utilities">
+        {utilities.map(({ icon: Icon, label, onClick }) => (
+          <button
+            key={label}
+            type="button"
+            className="inline-flex items-center justify-center p-1.5 rounded text-gray-300 hover:bg-gray-700 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            title={label}
+            aria-label={label}
+            disabled={disabled}
+            onClick={onClick}
+          >
+            <Icon size={16} aria-hidden="true" />
+          </button>
+        ))}
       </div>
     </div>
   );

@@ -1,6 +1,5 @@
 // src/editor/ui/LeftSidebar.tsx
 import { useState } from 'react';
-
 import BlocksPanel from './BlocksPanel';
 import LayersPanel from './LayersPanel';
 
@@ -8,15 +7,19 @@ export default function LeftSidebar() {
   const [activeTab, setActiveTab] = useState<'blocks' | 'layers'>('blocks');
 
   return (
-    <aside className="mjml-left">
-      <header className="mjml-panel-header">
-        <h2 className="mjml-panel-heading">Navigator</h2>
+    <aside className="w-64 bg-gray-50 rounded-lg border border-gray-300 flex flex-col overflow-hidden">
+      <header className="px-4 py-3 bg-gray-100 border-b border-gray-300">
+        <h2 className="text-xs font-semibold tracking-wider uppercase text-gray-600">Navigator</h2>
       </header>
 
-      <nav className="mjml-panel-tabs" aria-label="Left sidebar tabs" role="tablist">
+      <nav className="flex gap-1.5 p-2 bg-gray-100 border-b border-gray-300" aria-label="Left sidebar tabs" role="tablist">
         <button
           type="button"
-          className={`mjml-panel-tab ${activeTab === 'blocks' ? 'is-active' : ''}`}
+          className={`flex-1 px-3 py-1.5 rounded text-xs font-semibold transition-all ${
+            activeTab === 'blocks'
+              ? 'bg-white text-gray-900 border border-gray-400'
+              : 'bg-transparent text-gray-600 hover:bg-white/70 hover:text-gray-900'
+          }`}
           onClick={() => setActiveTab('blocks')}
           role="tab"
           aria-selected={activeTab === 'blocks'}
@@ -25,7 +28,11 @@ export default function LeftSidebar() {
         </button>
         <button
           type="button"
-          className={`mjml-panel-tab ${activeTab === 'layers' ? 'is-active' : ''}`}
+          className={`flex-1 px-3 py-1.5 rounded text-xs font-semibold transition-all ${
+            activeTab === 'layers'
+              ? 'bg-white text-gray-900 border border-gray-400'
+              : 'bg-transparent text-gray-600 hover:bg-white/70 hover:text-gray-900'
+          }`}
           onClick={() => setActiveTab('layers')}
           role="tab"
           aria-selected={activeTab === 'layers'}
@@ -34,7 +41,7 @@ export default function LeftSidebar() {
         </button>
       </nav>
 
-      <div className="mjml-panel-scroll" role="tabpanel" aria-live="polite">
+      <div className="flex-1 bg-white overflow-auto" role="tabpanel" aria-live="polite">
         {activeTab === 'blocks' && <BlocksPanel />}
         {activeTab === 'layers' && <LayersPanel />}
       </div>

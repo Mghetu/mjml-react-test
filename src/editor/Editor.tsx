@@ -56,7 +56,7 @@ export default function Editor() {
       <mj-body>
         <mj-section>
           <mj-column>
-            <mj-text>Start editing…</mj-text>
+            <mj-text>Start editing your email…</mj-text>
           </mj-column>
         </mj-section>
       </mj-body>
@@ -82,12 +82,12 @@ export default function Editor() {
         editor.refresh();
       }}
     >
-      <div className="editor-shell">
+      <div className="flex flex-col h-screen bg-gray-100">
         <Topbar />
-        <div className="editor-body">
+        <div className="flex flex-1 gap-3 p-3 min-h-0">
           <LeftSidebar />
-          <div className="canvas-wrap">
-            <Canvas />
+          <div className="flex-1 bg-gray-300 rounded-lg border border-gray-400 p-4 overflow-hidden min-w-0">
+            <Canvas className="bg-white rounded shadow-sm" />
           </div>
           <RightSidebar />
         </div>
