@@ -199,6 +199,110 @@
   overflow: hidden;
 }
 
+.templates-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  height: 100%;
+  box-sizing: border-box;
+  font-size: 0.82rem;
+  color: var(--gjs-secondary-color);
+  overflow-y: auto;
+}
+
+.templates-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.templates-action-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--gjs-main-dark-color);
+  border-radius: 3px;
+  background: var(--gjs-main-light-color);
+  color: var(--gjs-font-color-active);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  cursor: pointer;
+  transition: background var(--gjs-animation-duration),
+    border-color var(--gjs-animation-duration),
+    color var(--gjs-animation-duration);
+}
+
+.templates-action-button:hover,
+.templates-action-button:focus {
+  background: var(--gjs-main-dark-color);
+  border-color: var(--gjs-color-highlight);
+  color: var(--gjs-font-color-active);
+  outline: none;
+}
+
+.templates-action-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.templates-recents {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.templates-recents h4 {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gjs-font-color-active);
+}
+
+.templates-recents-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.templates-recent-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--gjs-main-dark-color);
+  border-radius: 3px;
+  background: var(--gjs-main-light-color);
+}
+
+.templates-recent-name {
+  font-weight: 600;
+  color: var(--gjs-font-color-active);
+  word-break: break-word;
+}
+
+.templates-recent-type {
+  font-size: 0.7rem;
+  color: var(--gjs-secondary-color);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.templates-recents-empty {
+  margin: 0;
+  color: var(--gjs-secondary-color);
+  font-size: 0.75rem;
+}
+
 .blocks-panel {
   height: 100%;
   padding: 12px;
