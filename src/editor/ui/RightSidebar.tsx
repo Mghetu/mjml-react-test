@@ -1,37 +1,8 @@
-import { useState, useEffect } from 'react';
-import { useEditorMaybe } from '../hooks/useEditorSafe';
+import { useState } from 'react';
+import { TraitsProvider, StylesProvider } from '@grapesjs/react';
 
 export default function RightSidebar() {
-  const editor = useEditorMaybe();
   const [tab, setTab] = useState<'traits' | 'styles'>('traits');
-
-  useEffect(() => {
-    if (!editor) return;
-
-    const ensureSelection = () => {
-      const sel = editor.getSelected?.();
-      if (sel) return;
-
-      const wrapper = editor.getWrapper();
-      if (!wrapper) return;
-
-      const candidates = wrapper.find('mj-text');
-      const fallback = wrapper.find('*');
-      const first = candidates[0] ?? fallback[0];
-
-      if (first) editor.select(first);
-    };
-
-    if (tab === 'traits') {
-      ensureSelection();
-      editor.runCommand('open-traits');
-    }
-
-    if (tab === 'styles') {
-      ensureSelection();
-      editor.runCommand('open-styles');
-    }
-  }, [tab, editor]);
 
   return (
     <aside className="mjml-right">
@@ -62,16 +33,22 @@ export default function RightSidebar() {
       <div className="mjml-panel-scroll">
         <div
           className={`mjml-panel-stack ${tab === 'traits' ? 'is-active' : ''}`}
-          id="mjml-traits"
           role="tabpanel"
           aria-hidden={tab !== 'traits'}
-        />
+        >
+          <TraitsProvider>
+            {({ Container }) => <Container><></></Container>}
+          </TraitsProvider>
+        </div>
         <div
           className={`mjml-panel-stack ${tab === 'styles' ? 'is-active' : ''}`}
-          id="mjml-styles"
           role="tabpanel"
           aria-hidden={tab !== 'styles'}
-        />
+        >
+          <StylesProvider>
+            {({ Container }) => <Container><></></Container>}
+          </StylesProvider>
+        </div>
       </div>
     </aside>
   );
