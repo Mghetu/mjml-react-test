@@ -1,11 +1,12 @@
 // src/editor/components/GrapesView.tsx
 import { useEffect, useRef } from 'react';
 import { useEditorMaybe } from '@grapesjs/react';
+import type { Editor } from 'grapesjs';
 
 export interface GrapesViewProps {
   isVisible?: boolean;
   className?: string;
-  getElement: (editor: any) => HTMLElement | null | undefined;
+  getElement: (editor: Editor) => HTMLElement | null | undefined;
 }
 
 export default function GrapesView({ isVisible = true, className, getElement }: GrapesViewProps) {
