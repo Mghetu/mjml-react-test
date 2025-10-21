@@ -26,21 +26,15 @@ export default function Editor() {
           ],
         },
 
-        // Disable default UI panels; we'll render our own shell
+        // Disable default UI panels; we use React Providers for custom UI
         panels: { defaults: [] },
-
-        // Mount official UIs into our custom containers
-        blockManager: { appendTo: "#mjml-blocks" },
-        layerManager: { appendTo: "#mjml-layers" },
-        traitManager: { appendTo: "#mjml-traits" },
-        styleManager: { appendTo: "#mjml-styles" },
 
         plugins: [mjmlPlugin],
       }}
       onEditor={(editor) => {
         (window as any).gjs = editor;
 
-        // Remove any sneaky device panel/buttons
+        // Remove default device panel/buttons (we have custom ones in Topbar)
         try {
           const pn = editor.Panels;
           pn.removePanel("devices-c");
@@ -55,7 +49,7 @@ export default function Editor() {
           });
         } catch {}
 
-        // 1) SEED: force a valid MJML skeleton every load
+        // Seed with a valid MJML skeleton
         editor.setComponents(
           `
     <mjml>
@@ -70,39 +64,22 @@ export default function Editor() {
   `.trim()
         );
 
-        // 2) Defer manager renders so our containers (#mjml-*) are in the DOM
-        //    and the canvas has computed layout
-        const renderManagers = () => {
-          editor.BlockManager.render();
-          editor.LayerManager.render();
-          editor.TraitManager.render();
-          editor.StyleManager.render();
-        };
+        // Set minimum canvas height for better UX
+        const iframe = editor.Canvas.getFrameEl();
+        if (iframe) {
+          iframe.style.minHeight = "800px";
+        }
 
-        // Use a double raf to let React mount the sidebars, then render managers
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            renderManagers();
+        // Auto-select first text element to populate Traits/Styles
+        const wrapper = editor.getWrapper();
+        if (wrapper) {
+          const first = wrapper.find("mj-text")[0] ?? wrapper.find("*")[0];
+          if (first) editor.select(first);
+        }
 
-            // 3) FORCE CANVAS DIMENSIONS: make sure the frame has height
-            const iframe = editor.Canvas.getFrameEl();
-            if (iframe) {
-              // minimum visible area so you immediately see content
-              iframe.style.minHeight = "800px";
-            }
-
-            // 4) Select something so Traits/Styles populate
-            const wrapper = editor.getWrapper();
-            if (!wrapper) return;
-
-            const first = wrapper.find("mj-text")[0] ?? wrapper.find("*")[0];
-            if (first) editor.select(first);
-
-            // 5) Device + refresh to recalc sizes
-            editor.setDevice("Desktop");
-            editor.refresh();
-          });
-        });
+        // Set initial device and refresh
+        editor.setDevice("Desktop");
+        editor.refresh();
       }}
     >
       <div className="editor-shell">
