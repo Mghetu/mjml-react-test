@@ -3,7 +3,7 @@ import { BlocksProvider } from '@grapesjs/react';
 
 export default function BlocksPanel() {
   return (
-    <div className="blocks-panel">
+    <div className="blocks-panel gjs-one-bg gjs-two-color">
       <BlocksProvider>
         {({ mapCategoryBlocks, dragStart, dragStop }) => (
           <div className="blocks-container">
