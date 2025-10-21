@@ -242,8 +242,14 @@
   transform: translateY(-1px);
 }
 
-.block-item:active {
-  cursor: grabbing;
+/* Panel wrappers */
+.panel-wrapper {
+  position: relative;
+  flex: 1;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
 }
 
 .block-content {
