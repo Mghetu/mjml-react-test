@@ -1,8 +1,10 @@
 // src/editor/components/Topbar.tsx
+import { useEffect, useState } from 'react';
 import { useEditor } from '@grapesjs/react';
 
 export default function Topbar() {
   const editor = useEditor();
+  const [outlineActive, setOutlineActive] = useState(false);
 
   const devices = [
     { id: 'Desktop', name: 'Desktop', icon: '🖥️' },
@@ -18,7 +20,45 @@ export default function Topbar() {
     { command: 'core:redo', icon: '↷', label: 'Redo' },
   ];
 
+  useEffect(() => {
+    if (!editor) {
+      return;
+    }
+
+    const outlineCommand = 'core:component-outline';
+    const commands = editor.Commands;
+
+    setOutlineActive(commands.isActive(outlineCommand));
+
+    const handleRun = () => setOutlineActive(true);
+    const handleStop = () => setOutlineActive(false);
+
+    editor.on(`run:${outlineCommand}`, handleRun);
+    editor.on(`stop:${outlineCommand}`, handleStop);
+
+    return () => {
+      editor.off(`run:${outlineCommand}`, handleRun);
+      editor.off(`stop:${outlineCommand}`, handleStop);
+    };
+  }, [editor]);
+
   const runCommand = (command: string) => {
+    if (command === 'core:open-code') {
+      const commands = editor.Commands as unknown as {
+        get?: (id: string) => unknown;
+      };
+
+      const resolveCommand = (...ids: string[]) =>
+        ids.find((id) => typeof commands.get === 'function' && commands.get(id));
+
+      const exportCommand = resolveCommand('export-template', 'mjml-export');
+
+      if (exportCommand) {
+        editor.runCommand(exportCommand);
+        return;
+      }
+    }
+
     editor.runCommand(command);
   };
 
@@ -26,8 +66,19 @@ export default function Topbar() {
     editor.setDevice(deviceId);
   };
 
+  const toggleOutline = () => {
+    const outlineCommand = 'core:component-outline';
+    const commands = editor.Commands;
+
+    if (commands.isActive(outlineCommand)) {
+      editor.stopCommand(outlineCommand);
+    } else {
+      editor.runCommand(outlineCommand);
+    }
+  };
+
   return (
-    <div className="topbar">
+    <div className="topbar gjs-one-bg gjs-two-color">
       <div className="topbar-section">
         <h1 className="editor-title">MJML Email Editor</h1>
       </div>
@@ -50,6 +101,13 @@ export default function Topbar() {
 
       <div className="topbar-section">
         <div className="action-buttons">
+          <button
+            className={`action-button ${outlineActive ? 'active' : ''}`}
+            onClick={toggleOutline}
+            title={outlineActive ? 'Hide component outline' : 'View component outline'}
+          >
+            🔳
+          </button>
           {actions.map((action) => (
             <button
               key={action.command}
