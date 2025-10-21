@@ -115,8 +115,8 @@
 .editor-body {
   display: flex;
   flex: 1;
-  gap: 0;
-  padding: 0;
+  gap: 0 !important;
+  padding: 0 !important;
   background: var(--gjs-primary-color);
   min-height: 0;
 }
@@ -389,7 +389,7 @@
   background: var(--gjs-main-color);
   border: 1px solid var(--gjs-main-dark-color);
   border-radius: 3px;
-  padding: 0;
+  padding: 0 !important;
   min-width: 0;
 }
 
