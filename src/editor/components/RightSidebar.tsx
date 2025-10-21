@@ -27,23 +27,24 @@ export default function RightSidebar() {
       </div>
 
       <div className="sidebar-content">
-        {activeTab === 'traits' ? (
+        <div style={{ display: activeTab === 'traits' ? 'block' : 'none' }}>
           <TraitsProvider>
             {({ Container }) => (
-              <div className="traits-container">
-                <Container><></></Container>
-              </div>
+              <Container>
+                <div></div>
+              </Container>
             )}
           </TraitsProvider>
-        ) : (
+        </div>
+        <div style={{ display: activeTab === 'styles' ? 'block' : 'none' }}>
           <StylesProvider>
             {({ Container }) => (
-              <div className="styles-container">
-                <Container><></></Container>
-              </div>
+              <Container>
+                <div></div>
+              </Container>
             )}
           </StylesProvider>
-        )}
+        </div>
       </div>
     </div>
   );
