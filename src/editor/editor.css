@@ -106,6 +106,12 @@
   outline: none;
 }
 
+.action-button.active {
+  background: var(--gjs-main-light-color);
+  border-color: var(--gjs-color-highlight);
+  color: var(--gjs-font-color-active);
+}
+
 .editor-body {
   display: flex;
   flex: 1;
