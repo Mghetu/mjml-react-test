@@ -1,9 +1,14 @@
 // src/editor/Editor.tsx
 import grapesjs from 'grapesjs';
-import GjsEditor from '@grapesjs/react';
+import GjsEditor, { Canvas, WithEditor } from '@grapesjs/react';
 import mjmlPlugin from 'grapesjs-mjml';
 
+import Topbar from './components/Topbar';
+import LeftSidebar from './components/LeftSidebar';
+import RightSidebar from './components/RightSidebar';
+
 import 'grapesjs/dist/css/grapes.min.css';
+import './editor.css';
 
 export default function Editor() {
   return (
@@ -12,18 +17,14 @@ export default function Editor() {
       grapesjsCss="https://unpkg.com/grapesjs/dist/css/grapes.min.css"
       options={{
         height: '100vh',
-        width: 'auto',
         storageManager: false,
         plugins: [mjmlPlugin],
-        canvas: {
-          styles: ['https://unpkg.com/grapesjs-mjml/dist/grapesjs-mjml.min.css'],
-        },
       }}
       onEditor={(editor) => {
         (window as any).editor = editor;
-        console.log('Editor loaded:', editor);
+        console.log('Editor loaded with React UI');
 
-        // Add initial MJML content to canvas
+        // Add initial MJML content
         editor.setComponents(`
           <mjml>
             <mj-body>
@@ -42,25 +43,21 @@ export default function Editor() {
           </mjml>
         `);
 
-        // Log block manager status
-        const blocks = editor.BlockManager.getAll();
-        console.log('Available blocks:', blocks.length);
-
-        // Make sure blocks panel is rendered and visible
-        const panels = editor.Panels;
-        const blocksPanel = panels.getPanel('views-container');
-        if (blocksPanel) {
-          blocksPanel.set('visible', true);
-          console.log('Blocks panel made visible');
-        }
-
-        // Get the blocks button and make sure it's visible
-        const blocksBtn = panels.getButton('views', 'open-blocks');
-        if (blocksBtn) {
-          blocksBtn.set('active', true);
-          console.log('Blocks button activated');
-        }
+        console.log('Available blocks:', editor.BlockManager.getAll().length);
       }}
-    />
+    >
+      <div className="editor-container">
+        <WithEditor>
+          <Topbar />
+        </WithEditor>
+        <div className="editor-body">
+          <LeftSidebar />
+          <div className="canvas-container">
+            <Canvas className="canvas-area" />
+          </div>
+          <RightSidebar />
+        </div>
+      </div>
+    </GjsEditor>
   );
 }
