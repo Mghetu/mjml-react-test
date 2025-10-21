@@ -24,6 +24,50 @@ export default function Editor() {
         (window as any).editor = editor;
         console.log('Editor loaded with React UI');
 
+        // Add the Microsoft Aptos system font to the typography control
+        const registerAptosFont = () => {
+          const styleManager = editor.StyleManager as any;
+          const fontProperty = styleManager?.getProperty?.('typography', 'font-family') as any;
+
+          if (!fontProperty) {
+            return;
+          }
+
+          const aptosStack = 'Aptos, Calibri, "Trebuchet MS", sans-serif';
+          const aptosOption = { id: aptosStack, label: 'Aptos (system)' };
+          const rawOptions =
+            typeof fontProperty.getOptions === 'function'
+              ? fontProperty.getOptions()
+              : fontProperty.get?.('options') ?? fontProperty.get?.('list');
+          const options: any[] = Array.isArray(rawOptions) ? rawOptions : [];
+
+          const hasAptos = options.some((option) => {
+            const optionId =
+              typeof option === 'string'
+                ? option
+                : option?.id ?? option?.value;
+
+            return typeof optionId === 'string' && optionId.toLowerCase().includes('aptos');
+          });
+
+          if (hasAptos) {
+            return;
+          }
+
+          const updatedOptions = [aptosOption, ...options];
+
+          if (typeof fontProperty.setOptions === 'function') {
+            fontProperty.setOptions(updatedOptions);
+          } else if (typeof fontProperty.addOption === 'function') {
+            fontProperty.addOption(aptosOption);
+          } else if (typeof fontProperty.set === 'function') {
+            fontProperty.set('options', updatedOptions);
+          }
+        };
+
+        registerAptosFont();
+        editor.on('load', registerAptosFont);
+
         // Add initial MJML content
         editor.setComponents(`
           <mjml>

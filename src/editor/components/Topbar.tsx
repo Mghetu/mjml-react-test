@@ -43,6 +43,22 @@ export default function Topbar() {
   }, [editor]);
 
   const runCommand = (command: string) => {
+    if (command === 'core:open-code') {
+      const commands = editor.Commands as unknown as {
+        get?: (id: string) => unknown;
+      };
+
+      const resolveCommand = (...ids: string[]) =>
+        ids.find((id) => typeof commands.get === 'function' && commands.get(id));
+
+      const exportCommand = resolveCommand('export-template', 'mjml-export');
+
+      if (exportCommand) {
+        editor.runCommand(exportCommand);
+        return;
+      }
+    }
+
     editor.runCommand(command);
   };
 
