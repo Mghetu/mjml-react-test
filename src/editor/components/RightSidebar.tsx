@@ -1,18 +1,22 @@
 // src/editor/components/RightSidebar.tsx
 import { useCallback, useState } from 'react';
+import type { Editor } from 'grapesjs';
 
 import GrapesView from './GrapesView';
+import TemplatesPanel from './TemplatesPanel';
+
+type SidebarTab = 'traits' | 'styles' | 'templates';
 
 export default function RightSidebar() {
-  const [activeTab, setActiveTab] = useState<'traits' | 'styles'>('traits');
+  const [activeTab, setActiveTab] = useState<SidebarTab>('traits');
 
-  const getTraitsElement = useCallback((editor: any) => {
-    const traitManager = (editor as any).TraitManager;
+  const getTraitsElement = useCallback((editor: Editor) => {
+    const traitManager = editor.TraitManager;
     return traitManager?.render() ?? null;
   }, []);
 
-  const getStylesElement = useCallback((editor: any) => {
-    const styleManager = (editor as any).StyleManager;
+  const getStylesElement = useCallback((editor: Editor) => {
+    const styleManager = editor.StyleManager;
     return styleManager?.render() ?? null;
   }, []);
 
@@ -35,6 +39,12 @@ export default function RightSidebar() {
         >
           Style
         </button>
+        <button
+          className={`tab-button gjs-btn ${activeTab === 'templates' ? 'active' : ''}`}
+          onClick={() => setActiveTab('templates')}
+        >
+          Templates
+        </button>
       </div>
 
       <div className="sidebar-content gjs-one-bg gjs-two-color">
@@ -48,6 +58,7 @@ export default function RightSidebar() {
           className="style-manager-panel gjs-one-bg gjs-two-color"
           getElement={getStylesElement}
         />
+        <TemplatesPanel isVisible={activeTab === 'templates'} />
       </div>
     </div>
   );
