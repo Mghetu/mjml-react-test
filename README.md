@@ -1,73 +1,40 @@
-# React + TypeScript + Vite
+# MJML React Editor
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A React + TypeScript application that embeds the [GrapesJS](https://grapesjs.com/) visual editor with the [grapesjs-mjml](https://github.com/GrapesJS/grapesjs-mjml) plugin to build responsive MJML email templates through a drag-and-drop interface. The UI is composed with the `@grapesjs/react` bindings to provide a React-friendly layout around the GrapesJS canvas.
 
-Currently, two official plugins are available:
+## Features
+- **Custom editor chrome** with a top bar, block/layer sidebar, and properties panel styled via `src/editor/editor.css`.
+- **MJML block library** supplied by `grapesjs-mjml`, exposed through a draggable Blocks panel.
+- **Responsive previews** toggled from the device buttons in the top bar.
+- **Traits and styles inspectors** rendered through the GrapesJS React providers.
+- **Starter template** injected on load to demonstrate MJML structure and interactions.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Project Structure
+```
+src/
+├── App.tsx             # Mounts the editor experience
+├── editor/
+│   ├── Editor.tsx      # Configures GrapesJS and composes the layout
+│   ├── components/     # Topbar, sidebars, blocks, layers, and property panels
+│   └── editor.css      # Visual styling for the editor shell
+├── index.css           # Base styles for the application
+└── main.tsx            # React entry point
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Additional architectural details and extension ideas are documented in [`docs/CONTEXT.md`](docs/CONTEXT.md).
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Getting Started
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+2. Start the development server:
+   ```bash
+   npm run dev
+   ```
+3. Open the provided localhost URL in your browser to interact with the editor.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Development Notes
+- The GrapesJS storage manager is disabled; designs persist only for the active session. Configure `storageManager` in `src/editor/Editor.tsx` to enable persistence.
+- Blocks, traits, and styles are rendered via providers from `@grapesjs/react`. Customize these components to extend the editor experience.
+- ESLint and TypeScript settings follow the default Vite template. Update `eslint.config.js` and the `tsconfig` files as needed for your tooling preferences.
