@@ -236,8 +236,14 @@
   transform: translateY(-1px);
 }
 
-.block-item:active {
-  cursor: grabbing;
+/* Panel wrappers */
+.panel-wrapper {
+  position: relative;
+  flex: 1;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
 }
 
 .block-content {
@@ -385,6 +391,11 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--gjs-main-dark-color);
+  border-radius: 3px;
+  background: var(--gjs-soft-light-color);
+  color: var(--gjs-secondary-color);
 }
 
 .layer-node {
