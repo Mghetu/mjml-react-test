@@ -12,6 +12,7 @@ export default function Editor() {
       options={{
         height: '100vh',
         storageManager: false,
+        // Don't disable default panels - let MJML plugin create them
         plugins: [mjmlPlugin],
       }}
       onEditor={(editor) => {
