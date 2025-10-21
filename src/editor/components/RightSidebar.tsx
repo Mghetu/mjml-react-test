@@ -303,33 +303,33 @@ export default function RightSidebar() {
   const [activeTab, setActiveTab] = useState<'traits' | 'styles'>('traits');
 
   return (
-    <div className="right-sidebar">
-      <div className="sidebar-header">
+    <div className="right-sidebar gjs-one-bg gjs-two-color">
+      <div className="sidebar-header gjs-one-bg gjs-two-color">
         <h3>Properties</h3>
       </div>
 
-      <div className="sidebar-tabs">
+      <div className="sidebar-tabs gjs-one-bg gjs-two-color">
         <button
-          className={`tab-button ${activeTab === 'traits' ? 'active' : ''}`}
+          className={`tab-button gjs-btn ${activeTab === 'traits' ? 'active' : ''}`}
           onClick={() => setActiveTab('traits')}
         >
           Settings
         </button>
         <button
-          className={`tab-button ${activeTab === 'styles' ? 'active' : ''}`}
+          className={`tab-button gjs-btn ${activeTab === 'styles' ? 'active' : ''}`}
           onClick={() => setActiveTab('styles')}
         >
           Style
         </button>
       </div>
 
-      <div className="sidebar-content">
+      <div className="sidebar-content gjs-one-bg gjs-two-color">
         <div style={{ display: activeTab === 'traits' ? 'block' : 'none' }}>
           <TraitsProvider>
             {({ traits }) => {
               if (!traits.length) {
                 return (
-                  <div className="panel-wrapper panel-wrapper--padded">
+                  <div className="panel-wrapper panel-wrapper--padded gjs-one-bg gjs-two-color">
                     <div className="empty-state">
                       Select a component on the canvas to edit its settings.
                     </div>
@@ -340,7 +340,7 @@ export default function RightSidebar() {
               const groups = groupTraitsByCategory(traits);
 
               return (
-                <div className="panel-wrapper panel-wrapper--padded">
+                <div className="panel-wrapper panel-wrapper--padded gjs-one-bg gjs-two-color">
                   {groups.map(([category, groupTraits]) => (
                     <Fragment key={category}>
                       <h4 className="property-group-title">{category}</h4>
@@ -360,7 +360,7 @@ export default function RightSidebar() {
 
               if (!hasProperties) {
                 return (
-                  <div className="panel-wrapper panel-wrapper--padded">
+                  <div className="panel-wrapper panel-wrapper--padded gjs-one-bg gjs-two-color">
                     <div className="empty-state">
                       Choose an element to view and adjust its style properties.
                     </div>
@@ -369,7 +369,7 @@ export default function RightSidebar() {
               }
 
               return (
-                <div className="panel-wrapper panel-wrapper--padded">
+                <div className="panel-wrapper panel-wrapper--padded gjs-one-bg gjs-two-color">
                   {groups.map((group) => (
                     <Fragment key={group.id}>
                       <h4 className="property-group-title">{group.label}</h4>

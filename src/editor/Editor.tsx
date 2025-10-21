@@ -46,7 +46,7 @@ export default function Editor() {
         console.log('Available blocks:', editor.BlockManager.getAll().length);
       }}
     >
-      <div className="editor-container">
+      <div className="editor-container gjs-one-bg gjs-two-color">
         <WithEditor>
           <Topbar />
         </WithEditor>

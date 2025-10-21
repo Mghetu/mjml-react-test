@@ -112,12 +112,12 @@ export default function LayersPanel() {
   };
 
   return (
-    <div className="layers-panel">
+    <div className="layers-panel gjs-one-bg gjs-two-color">
       <LayersProvider>
         {({ root }) => {
           if (!root) {
             return (
-              <div className="panel-wrapper panel-wrapper--flush">
+              <div className="panel-wrapper panel-wrapper--flush gjs-one-bg gjs-two-color">
                 <div className="empty-state">
                   Drag blocks onto the canvas to build your layout and see it listed here.
                 </div>
@@ -129,7 +129,7 @@ export default function LayersPanel() {
           const hasChildren = getComponentChildren(root).length > 0;
 
           return (
-            <div className="panel-wrapper panel-wrapper--flush">
+            <div className="panel-wrapper panel-wrapper--flush gjs-one-bg gjs-two-color">
               {hasChildren ? (
                 <ul className="layers-tree">
                   {nodes.map((component) => (
