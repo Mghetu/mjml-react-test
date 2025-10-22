@@ -4,6 +4,7 @@ import grapesjs, {
   type Component as GrapesComponent,
   type Editor as GrapesEditor,
   type Trait as GrapesTrait,
+  type TraitProperties,
 } from 'grapesjs';
 import GjsEditor, { Canvas, WithEditor } from '@grapesjs/react';
 import mjmlPlugin from 'grapesjs-mjml';
@@ -158,6 +159,7 @@ type GroupChangeOptions = {
 
 type SectionModel = GrapesComponent & {
   __groupCollections?: Map<string, ComponentCollection>;
+  ensureGroupTrait: () => void;
   setUseGroupTrait: (value: boolean, options?: GroupChangeOptions) => void;
   logGroupingWarning: () => void;
   getSectionChildren: () => GrapesComponent[];
@@ -201,61 +203,55 @@ const extendMjSectionTrait = (editor: ExtendedEditor) => {
     return;
   }
 
-  const baseDefaults = baseSectionType.model.prototype.defaults ?? {};
-  const baseTraits = Array.isArray(baseDefaults.traits)
-    ? baseDefaults.traits.map((trait: unknown) =>
-        typeof trait === 'string' ? trait : { ...(trait as Record<string, unknown>) },
-      )
-    : [];
-
-  const traitIndex = baseTraits.findIndex((trait: unknown) => {
-    if (typeof trait === 'string') {
-      return trait === GROUP_TRAIT_NAME;
-    }
-
-    return (trait as { name?: string }).name === GROUP_TRAIT_NAME;
-  });
-
-  if (traitIndex === -1) {
-    baseTraits.push({
-      type: 'checkbox',
-      name: GROUP_TRAIT_NAME,
-      label: GROUP_LABEL,
-      changeProp: true,
-    });
-  } else {
-    const existingTrait = baseTraits[traitIndex];
-    if (typeof existingTrait === 'string') {
-      baseTraits[traitIndex] = {
-        type: 'checkbox',
-        name: GROUP_TRAIT_NAME,
-        label: GROUP_LABEL,
-        changeProp: true,
-      };
-    } else {
-      baseTraits[traitIndex] = {
-        ...existingTrait,
-        type: 'checkbox',
-        name: GROUP_TRAIT_NAME,
-        label: GROUP_LABEL,
-        changeProp: true,
-      };
-    }
-  }
-
   const SectionModel = baseSectionType.model.extend(
     {
-      defaults: {
-        ...baseDefaults,
-        traits: baseTraits,
-        [GROUP_TRAIT_NAME]: false,
-        canGroup: false,
+      ensureGroupTrait(this: SectionModel) {
+        let trait = this.getTrait(GROUP_TRAIT_NAME) as GrapesTrait | undefined;
+
+        if (!trait) {
+          const traitProps: TraitProperties = {
+            type: 'checkbox',
+            name: GROUP_TRAIT_NAME,
+            label: GROUP_LABEL,
+            changeProp: true,
+          };
+
+          const [addedTrait] = this.addTrait([traitProps]);
+          trait = (addedTrait as GrapesTrait | undefined) ?? undefined;
+        }
+
+        if (!trait) {
+          return;
+        }
+
+        if (trait.get('type') !== 'checkbox') {
+          trait.set('type', 'checkbox');
+        }
+
+        const label = trait.get('label');
+        if (label !== GROUP_LABEL && label !== GROUP_DISABLED_LABEL) {
+          trait.set('label', GROUP_LABEL);
+        }
+
+        if (trait.get('changeProp') !== true) {
+          trait.set('changeProp', true);
+        }
+
+        if (typeof this.get('canGroup') !== 'boolean') {
+          this.set('canGroup', false, { silent: true });
+        }
+
+        if (typeof this.get(GROUP_TRAIT_NAME) !== 'boolean') {
+          this.setUseGroupTrait(false, { fromInit: true });
+        }
       },
 
       init(this: SectionModel, ...args: unknown[]) {
         baseSectionType.model.prototype.init.apply(this, args as never);
 
         this.__groupCollections = new Map();
+
+        this.ensureGroupTrait();
 
         const children = this.components();
         if (children) {
@@ -269,7 +265,13 @@ const extendMjSectionTrait = (editor: ExtendedEditor) => {
       },
 
       setUseGroupTrait(this: SectionModel, value: boolean, options?: GroupChangeOptions) {
-        const castOptions = options ? (options as unknown as Record<string, unknown>) : undefined;
+        const castOptions: Record<string, unknown> = options
+          ? { ...(options as unknown as Record<string, unknown>) }
+          : {};
+
+        if (options?.fromInit) {
+          castOptions.silent = true;
+        }
 
         this.set(GROUP_TRAIT_NAME, value, castOptions);
       },
@@ -335,6 +337,8 @@ const extendMjSectionTrait = (editor: ExtendedEditor) => {
       },
 
       updateGroupTraitState(this: SectionModel) {
+        this.ensureGroupTrait();
+
         this.bindGroupCollections();
 
         const canGroup = this.canGroupColumns();
