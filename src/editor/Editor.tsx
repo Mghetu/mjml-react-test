@@ -108,6 +108,14 @@ export default function Editor() {
       candidate.remove?.({ temporary: true });
     };
 
+    const cleanupWrapperChildren = (wrapper?: UnknownComponent | null) => {
+      if (!wrapper) {
+        return;
+      }
+
+      toComponentArray(wrapper.components?.()).forEach(removeIfEmptyDiv);
+    };
+
     const headOnlyComponentTypes = new Set([
       'mj-head',
       'mj-title',
@@ -134,7 +142,7 @@ export default function Editor() {
         badgable: false,
       });
 
-      toComponentArray(wrapperComponent.components?.()).forEach(removeIfEmptyDiv);
+      cleanupWrapperChildren(wrapperComponent);
 
       const bodyComponents = wrapperComponent.findType?.('mj-body');
 
