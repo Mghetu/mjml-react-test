@@ -49,6 +49,89 @@ export default function Editor() {
         (component?.get?.('tagName') as string | undefined) ??
         '').toLowerCase();
 
+    const toComponentArray = (collection: unknown): UnknownComponent[] => {
+      if (!collection) {
+        return [];
+      }
+
+      if (Array.isArray(collection)) {
+        return collection as UnknownComponent[];
+      }
+
+      if (typeof collection === 'object') {
+        const record = collection as Record<string, unknown>;
+
+        const maybeModels = record.models;
+        if (Array.isArray(maybeModels)) {
+          return maybeModels as UnknownComponent[];
+        }
+
+        const maybeToArray = record.toArray as (() => unknown) | undefined;
+        if (typeof maybeToArray === 'function') {
+          const arrayResult = maybeToArray.call(collection) as unknown;
+          if (Array.isArray(arrayResult)) {
+            return arrayResult as UnknownComponent[];
+          }
+        }
+
+        const maybeLength = record.length as number | undefined;
+        const maybeAt = record.at as ((index: number) => unknown) | undefined;
+
+        if (typeof maybeLength === 'number' && typeof maybeAt === 'function') {
+          const result: UnknownComponent[] = [];
+          for (let index = 0; index < maybeLength; index += 1) {
+            const item = maybeAt.call(collection, index) as
+              | UnknownComponent
+              | null
+              | undefined;
+            if (item) {
+              result.push(item);
+            }
+          }
+          return result;
+        }
+      }
+
+      return [];
+    };
+
+    const cleanupWrapperChildren = (wrapper?: UnknownComponent | null) => {
+      const targetWrapper = wrapper ?? (editor.getWrapper() as UnknownComponent | null);
+      if (!targetWrapper) {
+        return;
+      }
+
+      const children = toComponentArray(targetWrapper.components?.());
+      if (children.length === 0) {
+        return;
+      }
+
+      const toRemove = children.filter((child) => {
+        const type = getComponentType(child);
+        const tagName = (child.get?.('tagName') as string | undefined)?.toLowerCase();
+
+        if (type !== 'div' && tagName !== 'div') {
+          return false;
+        }
+
+        const nested = toComponentArray(child.components?.());
+        if (nested.length > 0) {
+          return false;
+        }
+
+        const rawContent = child.get?.('content');
+        if (typeof rawContent === 'string') {
+          return rawContent.trim().length === 0;
+        }
+
+        return !rawContent;
+      });
+
+      toRemove.forEach((child) => {
+        child.remove?.({ temporary: true });
+      });
+    };
+
     const headOnlyComponentTypes = new Set([
       'mj-head',
       'mj-title',
@@ -65,6 +148,8 @@ export default function Editor() {
       if (!wrapperComponent) {
         return;
       }
+
+      cleanupWrapperChildren(wrapperComponent);
 
       wrapperComponent.set?.({
         removable: false,
@@ -98,6 +183,8 @@ export default function Editor() {
         return;
       }
 
+      cleanupWrapperChildren(wrapperComponent);
+
       const existingBodies = wrapperComponent.findType?.('mj-body');
 
       if (Array.isArray(existingBodies) && existingBodies.length > 0) {
@@ -108,8 +195,13 @@ export default function Editor() {
       isRestoringMjBody = true;
 
       try {
-        if (typeof wrapperComponent.append === 'function') {
-          wrapperComponent.append({ type: 'mj-body' });
+        const mjmlComponents = wrapperComponent.findType?.('mjml');
+        const mjmlComponent = Array.isArray(mjmlComponents)
+          ? (mjmlComponents[0] as UnknownComponent | undefined)
+          : undefined;
+
+        if (mjmlComponent && typeof mjmlComponent.append === 'function') {
+          mjmlComponent.append({ type: 'mj-body' });
         } else {
           editor.setComponents('<mjml><mj-body></mj-body></mjml>');
         }
@@ -141,8 +233,14 @@ export default function Editor() {
 
       const parentComponent = component.parent?.() ?? null;
       const parentType = getComponentType(parentComponent);
+      const isDivUnderRoot =
+        parentType === 'div' &&
+        (() => {
+          const ancestorType = getComponentType(parentComponent?.parent?.() ?? null);
+          return ancestorType === 'wrapper' || ancestorType === 'mjml';
+        })();
 
-      if (parentType !== 'wrapper' && parentType !== 'mjml') {
+      if (parentType !== 'wrapper' && parentType !== 'mjml' && !isDivUnderRoot) {
         return;
       }
 
@@ -194,6 +292,8 @@ export default function Editor() {
       } finally {
         isRoutingComponentIntoBody = false;
       }
+
+      cleanupWrapperChildren();
     };
 
     ensureMjBodyPresence();
