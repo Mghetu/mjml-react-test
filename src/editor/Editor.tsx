@@ -30,6 +30,31 @@ export default function Editor() {
     (window as unknown as { editor?: GrapesEditor }).editor = editor;
     console.log('Editor loaded with React UI');
 
+    // Add custom visual styling for native mj-group components
+    editor.on('load', () => {
+      const style = document.createElement('style');
+      style.textContent = `
+        .gjs-selected [data-gjs-type="mj-group"] {
+          outline: 2px dashed #4CAF50 !important;
+          outline-offset: 2px;
+        }
+
+        [data-gjs-type="mj-group"]::before {
+          content: "GROUP";
+          display: inline-block;
+          background: #4CAF50;
+          color: white;
+          font-size: 10px;
+          padding: 2px 6px;
+          border-radius: 3px;
+          margin-right: 8px;
+        }
+      `;
+      document.head.appendChild(style);
+    });
+
+    console.log('Tip: Use mj-group to keep columns together on mobile');
+
     // Add the Microsoft Aptos system font to the typography control
     const registerAptosFont = () => {
       const styleManager = editor.StyleManager as unknown as {
