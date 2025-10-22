@@ -105,7 +105,10 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
             return;
           }
 
-          editor.DomComponents.clear();
+          const wrapper = editor.DomComponents.getWrapper();
+          if (wrapper) {
+            wrapper.set('content', '');
+          }
           editor.Css.clear();
           editor.setComponents(sanitizedMarkup);
           updateRecents(file.name, 'mjml');
