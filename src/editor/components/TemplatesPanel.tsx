@@ -3,6 +3,7 @@ import { useCallback, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { useEditorMaybe } from '@grapesjs/react';
 import type { Editor, Page } from 'grapesjs';
+import { sanitizeMjmlMarkup } from '../utils/mjml';
 
 const MAX_TEMPLATE_SIZE = 5 * 1024 * 1024; // 5MB
 
@@ -98,9 +99,15 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
         }
 
         try {
+          const sanitizedMarkup = sanitizeMjmlMarkup(result);
+          if (!sanitizedMarkup.toLowerCase().startsWith('<mjml')) {
+            window.alert('The selected file does not contain a valid <mjml> root element.');
+            return;
+          }
+
           editor.DomComponents.clear();
           editor.Css.clear();
-          editor.setComponents(result);
+          editor.setComponents(sanitizedMarkup);
           updateRecents(file.name, 'mjml');
         } catch (error) {
           console.error(error);

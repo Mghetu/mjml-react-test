@@ -7,6 +7,7 @@ import mjmlPlugin from 'grapesjs-mjml';
 import Topbar from './components/Topbar';
 import LeftSidebar from './components/LeftSidebar';
 import RightSidebar from './components/RightSidebar';
+import { sanitizeMjmlMarkup } from './utils/mjml';
 
 import 'grapesjs/dist/css/grapes.min.css';
 import './editor.css';
@@ -334,38 +335,40 @@ export default function Editor() {
     registerAptosFont();
     editor.on('load', registerAptosFont);
 
+    const initialTemplate = [
+      '<mjml>',
+      '  <mj-body>',
+      '    <mj-section>',
+      '      <mj-column>',
+      '        <mj-text>',
+      '          <h1>Welcome to MJML Editor</h1>',
+      '          <p>Drag and drop blocks from the left panel to build your email.</p>',
+      '        </mj-text>',
+      '        <mj-button href="#">',
+      '          Click Me',
+      '        </mj-button>',
+      '      </mj-column>',
+      '    </mj-section>',
+      '    <mj-section>',
+      '      <mj-group>',
+      '        <mj-column width="50%">',
+      '          <mj-text>',
+      '            <p><strong>mj-group Example:</strong> These columns stay side-by-side on mobile!</p>',
+      '          </mj-text>',
+      '        </mj-column>',
+      '        <mj-column width="50%">',
+      '          <mj-text>',
+      '            <p>Normally columns stack on mobile, but mj-group prevents this.</p>',
+      '          </mj-text>',
+      '        </mj-column>',
+      '      </mj-group>',
+      '    </mj-section>',
+      '  </mj-body>',
+      '</mjml>',
+    ].join('\n');
+
     // Add initial MJML content
-    editor.setComponents(`
-          <mjml>
-            <mj-body>
-              <mj-section>
-                <mj-column>
-                  <mj-text>
-                    <h1>Welcome to MJML Editor</h1>
-                    <p>Drag and drop blocks from the left panel to build your email.</p>
-                  </mj-text>
-                  <mj-button href="#">
-                    Click Me
-                  </mj-button>
-                </mj-column>
-              </mj-section>
-              <mj-section>
-                <mj-group>
-                  <mj-column width="50%">
-                    <mj-text>
-                      <p><strong>mj-group Example:</strong> These columns stay side-by-side on mobile!</p>
-                    </mj-text>
-                  </mj-column>
-                  <mj-column width="50%">
-                    <mj-text>
-                      <p>Normally columns stack on mobile, but mj-group prevents this.</p>
-                    </mj-text>
-                  </mj-column>
-                </mj-group>
-              </mj-section>
-            </mj-body>
-          </mjml>
-        `);
+    editor.setComponents(sanitizeMjmlMarkup(initialTemplate));
 
     ensureMjBodyPresence();
 
@@ -374,17 +377,23 @@ export default function Editor() {
 
     // Add mj-group block to the Block Manager
     // mj-group wraps columns to keep them side-by-side on mobile
+    const mjGroupBlockMarkup = [
+      '<mj-section>',
+      '  <mj-group>',
+      '    <mj-column width="50%">',
+      '      <mj-text>Column 1</mj-text>',
+      '    </mj-column>',
+      '    <mj-column width="50%">',
+      '      <mj-text>Column 2</mj-text>',
+      '    </mj-column>',
+      '  </mj-group>',
+      '</mj-section>',
+    ].join('\n');
+
     editor.BlockManager.add('mj-group', {
       label: 'Group',
       category: 'Basic',
-      content: `<mj-group>
-        <mj-column width="50%">
-          <mj-text>Column 1</mj-text>
-        </mj-column>
-        <mj-column width="50%">
-          <mj-text>Column 2</mj-text>
-        </mj-column>
-      </mj-group>`,
+      content: sanitizeMjmlMarkup(mjGroupBlockMarkup),
       media: `<svg viewBox="0 0 24 24" fill="currentColor">
         <path d="M3,3H21V7H3V3M3,9H21V11H3V9M3,13H21V21H3V13M5,15V19H19V15H5Z" />
       </svg>`,
