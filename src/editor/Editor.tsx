@@ -133,6 +133,20 @@ export default function Editor() {
         `);
 
     console.log('Available blocks:', editor.BlockManager.getAll().length);
+    console.log('Block IDs:', editor.BlockManager.getAll().map((b: { getId: () => string }) => b.getId()));
+
+    // Add mj-group block to the Block Manager
+    editor.BlockManager.add('mj-group', {
+      label: 'Group',
+      category: 'Basic',
+      content: '<mj-group></mj-group>',
+      media: `<svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M3,3H21V7H3V3M3,9H21V11H3V9M3,13H21V21H3V13M5,15V19H19V15H5Z" />
+      </svg>`,
+      attributes: { class: 'fa fa-object-group' },
+    });
+
+    console.log('Available blocks after adding mj-group:', editor.BlockManager.getAll().length);
   }, []);
 
   return (
