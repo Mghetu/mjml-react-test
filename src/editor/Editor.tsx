@@ -35,6 +35,7 @@ export default function Editor() {
       set?: (props: Record<string, unknown>) => void;
       findType?: (type: string) => unknown[];
       append?: (component: unknown, options?: Record<string, unknown>) => unknown;
+      move?: (target: unknown, options?: Record<string, unknown>) => unknown;
       components?: () => unknown;
       parent?: () => UnknownComponent | null | undefined;
       get?: (prop: string) => unknown;
@@ -48,6 +49,72 @@ export default function Editor() {
       ((component?.get?.('type') as string | undefined) ??
         (component?.get?.('tagName') as string | undefined) ??
         '').toLowerCase();
+
+    const toComponentArray = (collection: unknown): UnknownComponent[] => {
+      if (!collection) {
+        return [];
+      }
+
+      if (Array.isArray(collection)) {
+        return collection as UnknownComponent[];
+      }
+
+      if (typeof collection === 'object') {
+        const record = collection as Record<string, unknown>;
+        const maybeModels = record.models;
+
+        if (Array.isArray(maybeModels)) {
+          return maybeModels as UnknownComponent[];
+        }
+
+        const maybeToArray = record.toArray as (() => unknown) | undefined;
+        if (typeof maybeToArray === 'function') {
+          const arrayResult = maybeToArray.call(collection) as unknown;
+          if (Array.isArray(arrayResult)) {
+            return arrayResult as UnknownComponent[];
+          }
+        }
+      }
+
+      return [];
+    };
+
+    const removeIfEmptyDiv = (candidate?: UnknownComponent | null) => {
+      if (!candidate) {
+        return;
+      }
+
+      const type = getComponentType(candidate);
+      const tagName = (candidate.get?.('tagName') as string | undefined)?.toLowerCase();
+
+      if (type !== 'div' && tagName !== 'div') {
+        return;
+      }
+
+      const children = toComponentArray(candidate.components?.());
+      if (children.length > 0) {
+        return;
+      }
+
+      const rawContent = candidate.get?.('content');
+      if (typeof rawContent === 'string' && rawContent.trim().length > 0) {
+        return;
+      }
+
+      if (rawContent && typeof rawContent !== 'string') {
+        return;
+      }
+
+      candidate.remove?.({ temporary: true });
+    };
+
+    const cleanupWrapperChildren = (wrapper?: UnknownComponent | null) => {
+      if (!wrapper) {
+        return;
+      }
+
+      toComponentArray(wrapper.components?.()).forEach(removeIfEmptyDiv);
+    };
 
     const headOnlyComponentTypes = new Set([
       'mj-head',
@@ -72,6 +139,8 @@ export default function Editor() {
         copyable: false,
         badgable: false,
       });
+
+      cleanupWrapperChildren(wrapperComponent);
 
       const bodyComponents = wrapperComponent.findType?.('mj-body');
 
@@ -108,8 +177,13 @@ export default function Editor() {
       isRestoringMjBody = true;
 
       try {
-        if (typeof wrapperComponent.append === 'function') {
-          wrapperComponent.append({ type: 'mj-body' });
+        const mjmlComponents = wrapperComponent.findType?.('mjml');
+        const mjmlComponent = Array.isArray(mjmlComponents)
+          ? (mjmlComponents[0] as UnknownComponent | undefined)
+          : undefined;
+
+        if (mjmlComponent && typeof mjmlComponent.append === 'function') {
+          mjmlComponent.append({ type: 'mj-body' });
         } else {
           editor.setComponents('<mjml><mj-body></mj-body></mjml>');
         }
@@ -141,8 +215,14 @@ export default function Editor() {
 
       const parentComponent = component.parent?.() ?? null;
       const parentType = getComponentType(parentComponent);
+      const isDivUnderRoot =
+        parentType === 'div' &&
+        (() => {
+          const ancestorType = getComponentType(parentComponent?.parent?.() ?? null);
+          return ancestorType === 'wrapper' || ancestorType === 'mjml';
+        })();
 
-      if (parentType !== 'wrapper' && parentType !== 'mjml') {
+      if (parentType !== 'wrapper' && parentType !== 'mjml' && !isDivUnderRoot) {
         return;
       }
 
@@ -169,7 +249,14 @@ export default function Editor() {
         return;
       }
 
-      if (typeof bodyComponent.append !== 'function' || typeof component.remove !== 'function') {
+      const appendFn =
+        typeof bodyComponent.append === 'function'
+          ? bodyComponent.append.bind(bodyComponent)
+          : null;
+      const moveFn =
+        typeof component.move === 'function' ? component.move.bind(component) : null;
+
+      if (!appendFn && !moveFn) {
         return;
       }
 
@@ -178,22 +265,33 @@ export default function Editor() {
         | undefined;
       const insertionIndex =
         typeof bodyCollection?.length === 'number' ? bodyCollection.length : undefined;
+      const moveOptions =
+        typeof insertionIndex === 'number' ? { at: insertionIndex } : undefined;
 
       isRoutingComponentIntoBody = true;
 
       try {
-        component.remove({ temporary: true });
+        if (moveFn) {
+          moveFn(bodyComponent, moveOptions);
+        } else if (appendFn) {
+          if (typeof component.remove === 'function') {
+            component.remove({ temporary: true });
+          }
 
-        if (typeof insertionIndex === 'number') {
-          bodyComponent.append(component, {
-            at: insertionIndex,
-          });
-        } else {
-          bodyComponent.append(component);
+          if (typeof insertionIndex === 'number') {
+            appendFn(component, {
+              at: insertionIndex,
+            });
+          } else {
+            appendFn(component);
+          }
         }
       } finally {
         isRoutingComponentIntoBody = false;
       }
+
+      removeIfEmptyDiv(parentComponent);
+
     };
 
     ensureMjBodyPresence();
