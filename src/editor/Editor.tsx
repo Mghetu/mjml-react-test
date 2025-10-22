@@ -60,8 +60,8 @@ export default function Editor() {
 
       if (typeof collection === 'object') {
         const record = collection as Record<string, unknown>;
-
         const maybeModels = record.models;
+
         if (Array.isArray(maybeModels)) {
           return maybeModels as UnknownComponent[];
         }
@@ -73,63 +73,38 @@ export default function Editor() {
             return arrayResult as UnknownComponent[];
           }
         }
-
-        const maybeLength = record.length as number | undefined;
-        const maybeAt = record.at as ((index: number) => unknown) | undefined;
-
-        if (typeof maybeLength === 'number' && typeof maybeAt === 'function') {
-          const result: UnknownComponent[] = [];
-          for (let index = 0; index < maybeLength; index += 1) {
-            const item = maybeAt.call(collection, index) as
-              | UnknownComponent
-              | null
-              | undefined;
-            if (item) {
-              result.push(item);
-            }
-          }
-          return result;
-        }
       }
 
       return [];
     };
 
-    const cleanupWrapperChildren = (wrapper?: UnknownComponent | null) => {
-      const targetWrapper = wrapper ?? (editor.getWrapper() as UnknownComponent | null);
-      if (!targetWrapper) {
+    const removeIfEmptyDiv = (candidate?: UnknownComponent | null) => {
+      if (!candidate) {
         return;
       }
 
-      const children = toComponentArray(targetWrapper.components?.());
-      if (children.length === 0) {
+      const type = getComponentType(candidate);
+      const tagName = (candidate.get?.('tagName') as string | undefined)?.toLowerCase();
+
+      if (type !== 'div' && tagName !== 'div') {
         return;
       }
 
-      const toRemove = children.filter((child) => {
-        const type = getComponentType(child);
-        const tagName = (child.get?.('tagName') as string | undefined)?.toLowerCase();
+      const children = toComponentArray(candidate.components?.());
+      if (children.length > 0) {
+        return;
+      }
 
-        if (type !== 'div' && tagName !== 'div') {
-          return false;
-        }
+      const rawContent = candidate.get?.('content');
+      if (typeof rawContent === 'string' && rawContent.trim().length > 0) {
+        return;
+      }
 
-        const nested = toComponentArray(child.components?.());
-        if (nested.length > 0) {
-          return false;
-        }
+      if (rawContent && typeof rawContent !== 'string') {
+        return;
+      }
 
-        const rawContent = child.get?.('content');
-        if (typeof rawContent === 'string') {
-          return rawContent.trim().length === 0;
-        }
-
-        return !rawContent;
-      });
-
-      toRemove.forEach((child) => {
-        child.remove?.({ temporary: true });
-      });
+      candidate.remove?.({ temporary: true });
     };
 
     const headOnlyComponentTypes = new Set([
@@ -157,6 +132,8 @@ export default function Editor() {
         copyable: false,
         badgable: false,
       });
+
+      toComponentArray(wrapperComponent.components?.()).forEach(removeIfEmptyDiv);
 
       const bodyComponents = wrapperComponent.findType?.('mj-body');
 
@@ -267,7 +244,7 @@ export default function Editor() {
         return;
       }
 
-      if (typeof bodyComponent.append !== 'function' || typeof component.remove !== 'function') {
+      if (typeof bodyComponent.append !== 'function') {
         return;
       }
 
@@ -280,8 +257,6 @@ export default function Editor() {
       isRoutingComponentIntoBody = true;
 
       try {
-        component.remove({ temporary: true });
-
         if (typeof insertionIndex === 'number') {
           bodyComponent.append(component, {
             at: insertionIndex,
@@ -293,7 +268,8 @@ export default function Editor() {
         isRoutingComponentIntoBody = false;
       }
 
-      cleanupWrapperChildren();
+      removeIfEmptyDiv(parentComponent);
+
     };
 
     ensureMjBodyPresence();
