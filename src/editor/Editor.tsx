@@ -483,7 +483,7 @@ export default function Editor() {
         return;
       }
 
-      const aptosStack = 'Aptos, Calibri, "Trebuchet MS", sans-serif';
+      const aptosStack = 'Aptos, Calibri, sans-serif';
       const aptosOption = { id: aptosStack, label: 'Aptos (system)' };
       const rawOptions =
         typeof fontProperty.getOptions === 'function'
