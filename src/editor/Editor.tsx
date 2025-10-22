@@ -35,6 +35,7 @@ export default function Editor() {
       set?: (props: Record<string, unknown>) => void;
       findType?: (type: string) => unknown[];
       append?: (component: unknown, options?: Record<string, unknown>) => unknown;
+      move?: (target: unknown, options?: Record<string, unknown>) => unknown;
       components?: () => unknown;
       parent?: () => UnknownComponent | null | undefined;
       get?: (prop: string) => unknown;
@@ -244,7 +245,14 @@ export default function Editor() {
         return;
       }
 
-      if (typeof bodyComponent.append !== 'function') {
+      const appendFn =
+        typeof bodyComponent.append === 'function'
+          ? bodyComponent.append.bind(bodyComponent)
+          : null;
+      const moveFn =
+        typeof component.move === 'function' ? component.move.bind(component) : null;
+
+      if (!appendFn && !moveFn) {
         return;
       }
 
@@ -253,16 +261,26 @@ export default function Editor() {
         | undefined;
       const insertionIndex =
         typeof bodyCollection?.length === 'number' ? bodyCollection.length : undefined;
+      const moveOptions =
+        typeof insertionIndex === 'number' ? { at: insertionIndex } : undefined;
 
       isRoutingComponentIntoBody = true;
 
       try {
-        if (typeof insertionIndex === 'number') {
-          bodyComponent.append(component, {
-            at: insertionIndex,
-          });
-        } else {
-          bodyComponent.append(component);
+        if (moveFn) {
+          moveFn(bodyComponent, moveOptions);
+        } else if (appendFn) {
+          if (typeof component.remove === 'function') {
+            component.remove({ temporary: true });
+          }
+
+          if (typeof insertionIndex === 'number') {
+            appendFn(component, {
+              at: insertionIndex,
+            });
+          } else {
+            appendFn(component);
+          }
         }
       } finally {
         isRoutingComponentIntoBody = false;
