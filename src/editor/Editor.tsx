@@ -53,55 +53,50 @@ export default function Editor() {
       document.head.appendChild(style);
 
       // Fix for MJML components with zero padding disappearing from canvas
-      // Inject CSS into the canvas iframe
-      const canvasFrames = editor.Canvas.getFrames();
-      canvasFrames.forEach((frame: { view?: { el?: HTMLIFrameElement } }) => {
-        const iframe = frame.view?.el;
-        if (iframe?.contentDocument) {
-          const canvasStyle = iframe.contentDocument.createElement('style');
-          canvasStyle.textContent = `
-            /* Ensure MJML wrapper components have minimum height */
-            [data-gjs-type="mj-body"],
-            [data-gjs-type="mj-wrapper"],
-            [data-gjs-type="mj-section"],
-            [data-gjs-type="mj-group"],
-            [data-gjs-type="mj-column"] {
-              min-height: 20px !important;
-            }
+      // Inject CSS into the canvas iframe after a delay to ensure it's ready
+      setTimeout(() => {
+        const injectCanvasStyles = () => {
+          const canvasFrames = editor.Canvas.getFrames();
+          canvasFrames.forEach((frame: { view?: { el?: HTMLIFrameElement } }) => {
+            const iframe = frame.view?.el;
+            if (iframe?.contentDocument?.head) {
+              // Check if styles already injected
+              if (iframe.contentDocument.getElementById('mjml-padding-fix')) {
+                return;
+              }
 
-            /* Make components with zero padding visible with outline */
-            [data-gjs-type="mj-body"][style*="padding: 0"],
-            [data-gjs-type="mj-body"][style*="padding:0"],
-            [data-gjs-type="mj-wrapper"][style*="padding: 0"],
-            [data-gjs-type="mj-wrapper"][style*="padding:0"],
-            [data-gjs-type="mj-section"][style*="padding: 0"],
-            [data-gjs-type="mj-section"][style*="padding:0"],
-            [data-gjs-type="mj-group"][style*="padding: 0"],
-            [data-gjs-type="mj-group"][style*="padding:0"] {
-              min-height: 40px !important;
-              outline: 1px dashed rgba(150, 150, 150, 0.4) !important;
-              outline-offset: -1px;
-              position: relative !important;
-            }
+              const canvasStyle = iframe.contentDocument.createElement('style');
+              canvasStyle.id = 'mjml-padding-fix';
+              canvasStyle.textContent = `
+                /* Ensure MJML wrapper components have minimum height */
+                [data-gjs-type="mj-body"],
+                [data-gjs-type="mj-wrapper"],
+                [data-gjs-type="mj-section"],
+                [data-gjs-type="mj-group"],
+                [data-gjs-type="mj-column"] {
+                  min-height: 20px !important;
+                }
 
-            /* Visual indicator for empty components with zero padding */
-            [data-gjs-type="mj-section"][style*="padding: 0"]:not(:has(*))::after,
-            [data-gjs-type="mj-section"][style*="padding:0"]:not(:has(*))::after,
-            [data-gjs-type="mj-group"][style*="padding: 0"]:not(:has(*))::after,
-            [data-gjs-type="mj-group"][style*="padding:0"]:not(:has(*))::after {
-              content: "Empty (padding: 0)";
-              display: block;
-              padding: 10px;
-              color: #999;
-              font-size: 11px;
-              font-style: italic;
-              text-align: center;
-              pointer-events: none;
+                /* Make components with zero padding visible with subtle outline */
+                [data-gjs-type="mj-section"][style*="padding: 0"],
+                [data-gjs-type="mj-section"][style*="padding:0"],
+                [data-gjs-type="mj-group"][style*="padding: 0"],
+                [data-gjs-type="mj-group"][style*="padding:0"] {
+                  min-height: 50px !important;
+                  box-shadow: inset 0 0 0 1px rgba(150, 150, 150, 0.3) !important;
+                }
+              `;
+              iframe.contentDocument.head.appendChild(canvasStyle);
             }
-          `;
-          iframe.contentDocument.head.appendChild(canvasStyle);
-        }
-      });
+          };
+        };
+
+        // Inject styles initially
+        injectCanvasStyles();
+
+        // Re-inject on frame updates (when canvas reloads)
+        editor.on('frame:load', injectCanvasStyles);
+      }, 100);
     });
 
     console.log('Tip: mj-group contains columns that stay side-by-side on mobile (instead of stacking)');
