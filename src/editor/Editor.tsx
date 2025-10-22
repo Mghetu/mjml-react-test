@@ -88,7 +88,7 @@ export default function Editor() {
               `;
               iframe.contentDocument.head.appendChild(canvasStyle);
             }
-          };
+          });
         };
 
         // Inject styles initially
