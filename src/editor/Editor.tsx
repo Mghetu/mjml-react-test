@@ -300,8 +300,92 @@ export default function Editor() {
 
     ensureMjBodyPresence();
 
+    let allowStarterTemplateInjection = true;
+
+    const initialTemplate = [
+      '<mjml>',
+      '  <mj-body>',
+      '    <mj-section>',
+      '      <mj-column>',
+      '        <mj-text>',
+      '          <h1>Welcome to MJML Editor</h1>',
+      '          <p>Drag and drop blocks from the left panel to build your email.</p>',
+      '        </mj-text>',
+      '        <mj-button href="#">',
+      '          Click Me',
+      '        </mj-button>',
+      '      </mj-column>',
+      '    </mj-section>',
+      '    <mj-section>',
+      '      <mj-group>',
+      '        <mj-column width="50%">',
+      '          <mj-text>',
+      '            <p><strong>mj-group Example:</strong> These columns stay side-by-side on mobile!</p>',
+      '          </mj-text>',
+      '        </mj-column>',
+      '        <mj-column width="50%">',
+      '          <mj-text>',
+      '            <p>Normally columns stack on mobile, but mj-group prevents this.</p>',
+      '          </mj-text>',
+      '        </mj-column>',
+      '      </mj-group>',
+      '    </mj-section>',
+      '  </mj-body>',
+      '</mjml>',
+    ].join('\n');
+
+    const applyStarterTemplateIfEmpty = () => {
+      if (!allowStarterTemplateInjection) {
+        return;
+      }
+
+      const wrapperComponent = editor.getWrapper() as UnknownComponent | null;
+
+      if (!wrapperComponent) {
+        return;
+      }
+
+      const bodyComponents = wrapperComponent.findType?.('mj-body');
+      const bodyComponent = Array.isArray(bodyComponents)
+        ? (bodyComponents[0] as UnknownComponent | undefined)
+        : undefined;
+
+      if (!bodyComponent) {
+        return;
+      }
+
+      const bodyChildren = toComponentArray(bodyComponent.components?.());
+      const hasMeaningfulChild = bodyChildren.some((child) => {
+        const childType = getComponentType(child);
+
+        if (!childType) {
+          return false;
+        }
+
+        if (childType === 'textnode') {
+          const content = child.get?.('content');
+          return typeof content === 'string'
+            ? content.trim().length > 0
+            : Boolean(content);
+        }
+
+        return childType.startsWith('mj-') && childType !== 'mj-body';
+      });
+
+      if (hasMeaningfulChild) {
+        allowStarterTemplateInjection = false;
+        return;
+      }
+
+      editor.setComponents(sanitizeMjmlMarkup(initialTemplate));
+      ensureMjBodyPresence();
+    };
+
+    applyStarterTemplateIfEmpty();
+
     // Add custom visual styling for native mj-group components
     editor.on('load', () => {
+      applyStarterTemplateIfEmpty();
       const style = document.createElement('style');
       style.textContent = `
         .gjs-selected [data-gjs-type="mj-group"] {
@@ -367,6 +451,8 @@ export default function Editor() {
         // Re-inject on frame updates (when canvas reloads)
         editor.on('frame:load', injectCanvasStyles);
       }, 100);
+
+      allowStarterTemplateInjection = false;
     });
 
     editor.on('component:remove', ensureMjBodyPresence);
@@ -436,43 +522,6 @@ export default function Editor() {
 
     registerAptosFont();
     editor.on('load', registerAptosFont);
-
-    const initialTemplate = [
-      '<mjml>',
-      '  <mj-body>',
-      '    <mj-section>',
-      '      <mj-column>',
-      '        <mj-text>',
-      '          <h1>Welcome to MJML Editor</h1>',
-      '          <p>Drag and drop blocks from the left panel to build your email.</p>',
-      '        </mj-text>',
-      '        <mj-button href="#">',
-      '          Click Me',
-      '        </mj-button>',
-      '      </mj-column>',
-      '    </mj-section>',
-      '    <mj-section>',
-      '      <mj-group>',
-      '        <mj-column width="50%">',
-      '          <mj-text>',
-      '            <p><strong>mj-group Example:</strong> These columns stay side-by-side on mobile!</p>',
-      '          </mj-text>',
-      '        </mj-column>',
-      '        <mj-column width="50%">',
-      '          <mj-text>',
-      '            <p>Normally columns stack on mobile, but mj-group prevents this.</p>',
-      '          </mj-text>',
-      '        </mj-column>',
-      '      </mj-group>',
-      '    </mj-section>',
-      '  </mj-body>',
-      '</mjml>',
-    ].join('\n');
-
-    // Add initial MJML content
-    editor.setComponents(sanitizeMjmlMarkup(initialTemplate));
-
-    ensureMjBodyPresence();
 
     console.log('Available blocks:', editor.BlockManager.getAll().length);
     console.log('Block IDs:', editor.BlockManager.getAll().map((b: { getId: () => string }) => b.getId()));
