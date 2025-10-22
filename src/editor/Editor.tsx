@@ -33,10 +33,30 @@ export default function Editor() {
     type UnknownComponent = {
       set?: (props: Record<string, unknown>) => void;
       findType?: (type: string) => unknown[];
-      append?: (component: unknown) => unknown;
+      append?: (component: unknown, options?: Record<string, unknown>) => unknown;
+      components?: () => unknown;
+      parent?: () => UnknownComponent | null | undefined;
+      get?: (prop: string) => unknown;
+      remove?: (options?: Record<string, unknown>) => void;
     };
 
     let isRestoringMjBody = false;
+    let isRoutingComponentIntoBody = false;
+
+    const getComponentType = (component: UnknownComponent | null | undefined) =>
+      ((component?.get?.('type') as string | undefined) ??
+        (component?.get?.('tagName') as string | undefined) ??
+        '').toLowerCase();
+
+    const headOnlyComponentTypes = new Set([
+      'mj-head',
+      'mj-title',
+      'mj-preview',
+      'mj-style',
+      'mj-font',
+      'mj-attributes',
+      'mj-html',
+    ]);
 
     const lockRootComponents = () => {
       const wrapperComponent = editor.getWrapper() as UnknownComponent | null;
@@ -67,7 +87,7 @@ export default function Editor() {
     };
 
     const ensureMjBodyPresence = () => {
-      if (isRestoringMjBody) {
+      if (isRestoringMjBody || isRoutingComponentIntoBody) {
         return;
       }
 
@@ -97,6 +117,82 @@ export default function Editor() {
       }
 
       lockRootComponents();
+    };
+
+    const ensureComponentInMjBody = (component: UnknownComponent) => {
+      if (isRestoringMjBody || isRoutingComponentIntoBody) {
+        return;
+      }
+
+      const componentType = getComponentType(component);
+
+      if (!componentType.startsWith('mj-')) {
+        return;
+      }
+
+      if (
+        componentType === 'mj-body' ||
+        componentType === 'mjml' ||
+        headOnlyComponentTypes.has(componentType)
+      ) {
+        return;
+      }
+
+      const parentComponent = component.parent?.() ?? null;
+      const parentType = getComponentType(parentComponent);
+
+      if (parentType !== 'wrapper' && parentType !== 'mjml') {
+        return;
+      }
+
+      const wrapperComponent = editor.getWrapper() as UnknownComponent | null;
+
+      if (!wrapperComponent) {
+        return;
+      }
+
+      let bodyComponents = wrapperComponent.findType?.('mj-body');
+
+      if (!Array.isArray(bodyComponents) || bodyComponents.length === 0) {
+        ensureMjBodyPresence();
+        bodyComponents = wrapperComponent.findType?.('mj-body');
+      }
+
+      if (!Array.isArray(bodyComponents) || bodyComponents.length === 0) {
+        return;
+      }
+
+      const bodyComponent = bodyComponents[0] as UnknownComponent;
+
+      if (parentComponent === bodyComponent) {
+        return;
+      }
+
+      if (typeof bodyComponent.append !== 'function' || typeof component.remove !== 'function') {
+        return;
+      }
+
+      const bodyCollection = bodyComponent.components?.() as
+        | { length?: number }
+        | undefined;
+      const insertionIndex =
+        typeof bodyCollection?.length === 'number' ? bodyCollection.length : undefined;
+
+      isRoutingComponentIntoBody = true;
+
+      try {
+        component.remove({ temporary: true });
+
+        if (typeof insertionIndex === 'number') {
+          bodyComponent.append(component, {
+            at: insertionIndex,
+          });
+        } else {
+          bodyComponent.append(component);
+        }
+      } finally {
+        isRoutingComponentIntoBody = false;
+      }
     };
 
     ensureMjBodyPresence();
@@ -173,6 +269,9 @@ export default function Editor() {
     editor.on('component:remove', ensureMjBodyPresence);
     editor.on('run:core:canvas-clear', () => {
       setTimeout(ensureMjBodyPresence, 0);
+    });
+    editor.on('component:add', (component) => {
+      ensureComponentInMjBody(component as UnknownComponent);
     });
 
     console.log('Tip: mj-group contains columns that stay side-by-side on mobile (instead of stacking)');
