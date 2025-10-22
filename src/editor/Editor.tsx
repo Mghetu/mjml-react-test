@@ -125,6 +125,8 @@ export default function Editor() {
         return;
       }
 
+      cleanupWrapperChildren(wrapperComponent);
+
       wrapperComponent.set?.({
         removable: false,
         draggable: false,
@@ -158,6 +160,8 @@ export default function Editor() {
       if (!wrapperComponent) {
         return;
       }
+
+      cleanupWrapperChildren(wrapperComponent);
 
       const existingBodies = wrapperComponent.findType?.('mj-body');
 
