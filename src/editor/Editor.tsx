@@ -30,6 +30,173 @@ export default function Editor() {
     (window as unknown as { editor?: GrapesEditor }).editor = editor;
     console.log('Editor loaded with React UI');
 
+    type UnknownComponent = {
+      set?: (props: Record<string, unknown>) => void;
+      findType?: (type: string) => unknown[];
+      append?: (component: unknown, options?: Record<string, unknown>) => unknown;
+      components?: () => unknown;
+      parent?: () => UnknownComponent | null | undefined;
+      get?: (prop: string) => unknown;
+      remove?: (options?: Record<string, unknown>) => void;
+    };
+
+    let isRestoringMjBody = false;
+    let isRoutingComponentIntoBody = false;
+
+    const getComponentType = (component: UnknownComponent | null | undefined) =>
+      ((component?.get?.('type') as string | undefined) ??
+        (component?.get?.('tagName') as string | undefined) ??
+        '').toLowerCase();
+
+    const headOnlyComponentTypes = new Set([
+      'mj-head',
+      'mj-title',
+      'mj-preview',
+      'mj-style',
+      'mj-font',
+      'mj-attributes',
+      'mj-html',
+    ]);
+
+    const lockRootComponents = () => {
+      const wrapperComponent = editor.getWrapper() as UnknownComponent | null;
+
+      if (!wrapperComponent) {
+        return;
+      }
+
+      wrapperComponent.set?.({
+        removable: false,
+        draggable: false,
+        copyable: false,
+        badgable: false,
+      });
+
+      const bodyComponents = wrapperComponent.findType?.('mj-body');
+
+      if (!Array.isArray(bodyComponents)) {
+        return;
+      }
+
+      bodyComponents.forEach((bodyComponent) => {
+        (bodyComponent as UnknownComponent).set?.({
+          removable: false,
+          draggable: false,
+        });
+      });
+    };
+
+    const ensureMjBodyPresence = () => {
+      if (isRestoringMjBody || isRoutingComponentIntoBody) {
+        return;
+      }
+
+      const wrapperComponent = editor.getWrapper() as UnknownComponent | null;
+
+      if (!wrapperComponent) {
+        return;
+      }
+
+      const existingBodies = wrapperComponent.findType?.('mj-body');
+
+      if (Array.isArray(existingBodies) && existingBodies.length > 0) {
+        lockRootComponents();
+        return;
+      }
+
+      isRestoringMjBody = true;
+
+      try {
+        if (typeof wrapperComponent.append === 'function') {
+          wrapperComponent.append({ type: 'mj-body' });
+        } else {
+          editor.setComponents('<mjml><mj-body></mj-body></mjml>');
+        }
+      } finally {
+        isRestoringMjBody = false;
+      }
+
+      lockRootComponents();
+    };
+
+    const ensureComponentInMjBody = (component: UnknownComponent) => {
+      if (isRestoringMjBody || isRoutingComponentIntoBody) {
+        return;
+      }
+
+      const componentType = getComponentType(component);
+
+      if (!componentType.startsWith('mj-')) {
+        return;
+      }
+
+      if (
+        componentType === 'mj-body' ||
+        componentType === 'mjml' ||
+        headOnlyComponentTypes.has(componentType)
+      ) {
+        return;
+      }
+
+      const parentComponent = component.parent?.() ?? null;
+      const parentType = getComponentType(parentComponent);
+
+      if (parentType !== 'wrapper' && parentType !== 'mjml') {
+        return;
+      }
+
+      const wrapperComponent = editor.getWrapper() as UnknownComponent | null;
+
+      if (!wrapperComponent) {
+        return;
+      }
+
+      let bodyComponents = wrapperComponent.findType?.('mj-body');
+
+      if (!Array.isArray(bodyComponents) || bodyComponents.length === 0) {
+        ensureMjBodyPresence();
+        bodyComponents = wrapperComponent.findType?.('mj-body');
+      }
+
+      if (!Array.isArray(bodyComponents) || bodyComponents.length === 0) {
+        return;
+      }
+
+      const bodyComponent = bodyComponents[0] as UnknownComponent;
+
+      if (parentComponent === bodyComponent) {
+        return;
+      }
+
+      if (typeof bodyComponent.append !== 'function' || typeof component.remove !== 'function') {
+        return;
+      }
+
+      const bodyCollection = bodyComponent.components?.() as
+        | { length?: number }
+        | undefined;
+      const insertionIndex =
+        typeof bodyCollection?.length === 'number' ? bodyCollection.length : undefined;
+
+      isRoutingComponentIntoBody = true;
+
+      try {
+        component.remove({ temporary: true });
+
+        if (typeof insertionIndex === 'number') {
+          bodyComponent.append(component, {
+            at: insertionIndex,
+          });
+        } else {
+          bodyComponent.append(component);
+        }
+      } finally {
+        isRoutingComponentIntoBody = false;
+      }
+    };
+
+    ensureMjBodyPresence();
+
     // Add custom visual styling for native mj-group components
     editor.on('load', () => {
       const style = document.createElement('style');
@@ -97,6 +264,14 @@ export default function Editor() {
         // Re-inject on frame updates (when canvas reloads)
         editor.on('frame:load', injectCanvasStyles);
       }, 100);
+    });
+
+    editor.on('component:remove', ensureMjBodyPresence);
+    editor.on('run:core:canvas-clear', () => {
+      setTimeout(ensureMjBodyPresence, 0);
+    });
+    editor.on('component:add', (component) => {
+      ensureComponentInMjBody(component as UnknownComponent);
     });
 
     console.log('Tip: mj-group contains columns that stay side-by-side on mobile (instead of stacking)');
@@ -191,6 +366,8 @@ export default function Editor() {
             </mj-body>
           </mjml>
         `);
+
+    ensureMjBodyPresence();
 
     console.log('Available blocks:', editor.BlockManager.getAll().length);
     console.log('Block IDs:', editor.BlockManager.getAll().map((b: { getId: () => string }) => b.getId()));
