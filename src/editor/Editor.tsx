@@ -51,6 +51,57 @@ export default function Editor() {
         }
       `;
       document.head.appendChild(style);
+
+      // Fix for MJML components with zero padding disappearing from canvas
+      // Inject CSS into the canvas iframe
+      const canvasFrames = editor.Canvas.getFrames();
+      canvasFrames.forEach((frame: { view?: { el?: HTMLIFrameElement } }) => {
+        const iframe = frame.view?.el;
+        if (iframe?.contentDocument) {
+          const canvasStyle = iframe.contentDocument.createElement('style');
+          canvasStyle.textContent = `
+            /* Ensure MJML wrapper components have minimum height */
+            [data-gjs-type="mj-body"],
+            [data-gjs-type="mj-wrapper"],
+            [data-gjs-type="mj-section"],
+            [data-gjs-type="mj-group"],
+            [data-gjs-type="mj-column"] {
+              min-height: 20px !important;
+            }
+
+            /* Make components with zero padding visible with outline */
+            [data-gjs-type="mj-body"][style*="padding: 0"],
+            [data-gjs-type="mj-body"][style*="padding:0"],
+            [data-gjs-type="mj-wrapper"][style*="padding: 0"],
+            [data-gjs-type="mj-wrapper"][style*="padding:0"],
+            [data-gjs-type="mj-section"][style*="padding: 0"],
+            [data-gjs-type="mj-section"][style*="padding:0"],
+            [data-gjs-type="mj-group"][style*="padding: 0"],
+            [data-gjs-type="mj-group"][style*="padding:0"] {
+              min-height: 40px !important;
+              outline: 1px dashed rgba(150, 150, 150, 0.4) !important;
+              outline-offset: -1px;
+              position: relative !important;
+            }
+
+            /* Visual indicator for empty components with zero padding */
+            [data-gjs-type="mj-section"][style*="padding: 0"]:not(:has(*))::after,
+            [data-gjs-type="mj-section"][style*="padding:0"]:not(:has(*))::after,
+            [data-gjs-type="mj-group"][style*="padding: 0"]:not(:has(*))::after,
+            [data-gjs-type="mj-group"][style*="padding:0"]:not(:has(*))::after {
+              content: "Empty (padding: 0)";
+              display: block;
+              padding: 10px;
+              color: #999;
+              font-size: 11px;
+              font-style: italic;
+              text-align: center;
+              pointer-events: none;
+            }
+          `;
+          iframe.contentDocument.head.appendChild(canvasStyle);
+        }
+      });
     });
 
     console.log('Tip: mj-group contains columns that stay side-by-side on mobile (instead of stacking)');
