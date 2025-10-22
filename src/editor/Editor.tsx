@@ -34,6 +34,7 @@ export default function Editor() {
     (window as unknown as { editor?: GrapesEditor }).editor = editor;
     console.log('Editor loaded with React UI');
 
+
     const extendMjSection = () => {
       const GROUP_TRAIT_NAME = 'useGroup';
       const GROUP_LABEL = 'Group columns';
@@ -52,7 +53,7 @@ export default function Editor() {
 
       type SectionModel = GrapesComponent & {
         __groupCollections?: Map<string, ComponentCollection>;
-        ensureGroupTrait: () => void;
+        setUseGroupTrait: (value: boolean, options?: GroupChangeOptions) => void;
         logGroupingWarning: () => void;
         getSectionChildren: () => GrapesComponent[];
         getDirectColumns: () => GrapesComponent[];
@@ -60,7 +61,6 @@ export default function Editor() {
         getOrderedColumns: () => GrapesComponent[];
         canGroupColumns: () => boolean;
         bindGroupCollections: () => void;
-        normalizeInitialGrouping: () => void;
         updateGroupTraitState: () => void;
         handleGroupToggle: (
           model: GrapesComponent,
@@ -69,7 +69,6 @@ export default function Editor() {
         ) => void;
         wrapColumnsIntoGroup: () => GrapesComponent | null;
         unwrapColumnsFromGroups: () => void;
-        setUseGroupTrait: (value: boolean, options?: GroupChangeOptions) => void;
       };
 
       type GroupChangeOptions = {
@@ -89,10 +88,53 @@ export default function Editor() {
         return Array.isArray(models) ? [...models] : [];
       };
 
-      const sectionModel = baseSectionType.model.extend(
+      const baseDefaults = baseSectionType.model.prototype.defaults ?? {};
+      const baseTraits = Array.isArray(baseDefaults.traits)
+        ? baseDefaults.traits.map((trait: unknown) =>
+            typeof trait === 'string' ? trait : { ...(trait as Record<string, unknown>) },
+          )
+        : [];
+
+      const traitIndex = baseTraits.findIndex((trait: unknown) => {
+        if (typeof trait === 'string') {
+          return trait === GROUP_TRAIT_NAME;
+        }
+
+        return (trait as { name?: string }).name === GROUP_TRAIT_NAME;
+      });
+
+      if (traitIndex === -1) {
+        baseTraits.push({
+          type: 'checkbox',
+          name: GROUP_TRAIT_NAME,
+          label: GROUP_LABEL,
+          changeProp: true,
+        });
+      } else {
+        const existingTrait = baseTraits[traitIndex];
+        if (typeof existingTrait === 'string') {
+          baseTraits[traitIndex] = {
+            type: 'checkbox',
+            name: GROUP_TRAIT_NAME,
+            label: GROUP_LABEL,
+            changeProp: true,
+          };
+        } else {
+          baseTraits[traitIndex] = {
+            ...existingTrait,
+            type: 'checkbox',
+            name: GROUP_TRAIT_NAME,
+            label: GROUP_LABEL,
+            changeProp: true,
+          };
+        }
+      }
+
+      const SectionModel = baseSectionType.model.extend(
         {
           defaults: {
-            ...baseSectionType.model.prototype.defaults,
+            ...baseDefaults,
+            traits: baseTraits,
             [GROUP_TRAIT_NAME]: false,
             canGroup: false,
           },
@@ -102,46 +144,18 @@ export default function Editor() {
 
             this.__groupCollections = new Map();
 
-            this.ensureGroupTrait();
-            this.on(`change:${GROUP_TRAIT_NAME}`, this.handleGroupToggle);
-            this.on('component:add component:remove component:reset', this.updateGroupTraitState);
-
             const children = this.components();
             if (children) {
               this.listenTo(children, 'add remove reset', this.updateGroupTraitState);
             }
 
-            this.normalizeInitialGrouping();
+            this.on('component:add component:remove component:reset', this.updateGroupTraitState);
+            this.on(`change:${GROUP_TRAIT_NAME}`, this.handleGroupToggle);
+
             this.updateGroupTraitState();
           },
 
-          ensureGroupTrait(this: SectionModel) {
-            const existingTrait = this.getTrait(GROUP_TRAIT_NAME) as GrapesTrait | undefined;
-
-            if (!existingTrait) {
-              this.addTrait([
-                {
-                  type: 'checkbox',
-                  name: GROUP_TRAIT_NAME,
-                  label: GROUP_LABEL,
-                  changeProp: true,
-                },
-              ]);
-              return;
-            }
-
-            if (existingTrait.get('type') !== 'checkbox') {
-              existingTrait.set('type', 'checkbox');
-            }
-
-            if (existingTrait.get('changeProp') !== true) {
-              existingTrait.set('changeProp', true);
-            }
-
-            existingTrait.set('label', GROUP_LABEL);
-          },
-
-          setUseGroupTrait(this: SectionModel, value: boolean, options?: GroupChangeOptions): void {
+          setUseGroupTrait(this: SectionModel, value: boolean, options?: GroupChangeOptions) {
             const castOptions = options
               ? (options as unknown as Record<string, unknown>)
               : undefined;
@@ -153,19 +167,19 @@ export default function Editor() {
             this.em?.logWarning(GROUP_WARNING_MESSAGE);
           },
 
-          getSectionChildren(this: SectionModel): GrapesComponent[] {
+          getSectionChildren(this: SectionModel) {
             return collectionToArray(this.components());
           },
 
-          getDirectColumns(this: SectionModel): GrapesComponent[] {
+          getDirectColumns(this: SectionModel) {
             return this.getSectionChildren().filter((child) => child.is('mj-column'));
           },
 
-          getDirectGroups(this: SectionModel): GrapesComponent[] {
+          getDirectGroups(this: SectionModel) {
             return this.getSectionChildren().filter((child) => child.is('mj-group'));
           },
 
-          getOrderedColumns(this: SectionModel): GrapesComponent[] {
+          getOrderedColumns(this: SectionModel) {
             const ordered: GrapesComponent[] = [];
 
             this.getSectionChildren().forEach((child) => {
@@ -173,8 +187,8 @@ export default function Editor() {
                 ordered.push(child);
               } else if (child.is('mj-group')) {
                 ordered.push(
-                  ...collectionToArray(child.components()).filter((grandChild) =>
-                    grandChild.is('mj-column'),
+                  ...collectionToArray(child.components()).filter((nested) =>
+                    nested.is('mj-column'),
                   ),
                 );
               }
@@ -183,77 +197,44 @@ export default function Editor() {
             return ordered;
           },
 
-          canGroupColumns(this: SectionModel): boolean {
-            const groups = this.getDirectGroups();
-            const directColumns = this.getDirectColumns();
-            const orderedColumns = this.getOrderedColumns();
-
-            if (groups.length > 0) {
-              return orderedColumns.length >= 2;
-            }
-
-            return directColumns.length >= 2;
+          canGroupColumns(this: SectionModel) {
+            return this.getOrderedColumns().length >= 2;
           },
 
-          bindGroupCollections(this: SectionModel): void {
+          bindGroupCollections(this: SectionModel) {
             const groups = this.getDirectGroups();
-            const activeMap = this.__groupCollections ?? new Map<string, ComponentCollection>();
+            const map = this.__groupCollections ?? new Map<string, ComponentCollection>();
 
-            [...activeMap.entries()].forEach(([groupId, collection]) => {
+            [...map.entries()].forEach(([groupId, collection]) => {
               if (!groups.some((group) => group.cid === groupId)) {
                 this.stopListening(collection);
-                activeMap.delete(groupId);
+                map.delete(groupId);
               }
             });
 
             groups.forEach((group) => {
               const collection = group.components();
-              if (!collection || activeMap.has(group.cid)) {
+              if (!collection || map.has(group.cid)) {
                 return;
               }
 
               this.listenTo(collection, 'add remove reset', this.updateGroupTraitState);
-              activeMap.set(group.cid, collection);
+              map.set(group.cid, collection);
             });
 
-            this.__groupCollections = activeMap;
+            this.__groupCollections = map;
           },
 
-          normalizeInitialGrouping(this: SectionModel): void {
-            const hasGroup = this.getDirectGroups().length > 0;
-            const totalColumns = this.getOrderedColumns().length;
-            const wantsGroup = Boolean(this.get(GROUP_TRAIT_NAME));
-
-            if (wantsGroup) {
-              if (totalColumns >= 2) {
-                this.wrapColumnsIntoGroup();
-              } else {
-                this.setUseGroupTrait(false, { fromInit: true });
-                this.unwrapColumnsFromGroups();
-              }
-              return;
-            }
-
-            if (hasGroup) {
-              if (totalColumns >= 2) {
-                this.setUseGroupTrait(true, { fromInit: true });
-              } else {
-                this.unwrapColumnsFromGroups();
-              }
-            }
-          },
-
-          updateGroupTraitState(this: SectionModel): void {
-            const trait = this.getTrait(GROUP_TRAIT_NAME) as GrapesTrait | undefined;
-
-            if (!trait) {
-              return;
-            }
+          updateGroupTraitState(this: SectionModel) {
+            this.bindGroupCollections();
 
             const canGroup = this.canGroupColumns();
+            const hasGroup = this.getDirectGroups().length > 0;
+            const currentUseGroup = Boolean(this.get(GROUP_TRAIT_NAME));
+            const trait = this.getTrait(GROUP_TRAIT_NAME) as GrapesTrait | undefined;
             const label = canGroup ? GROUP_LABEL : GROUP_DISABLED_LABEL;
 
-            if (trait.get('label') !== label) {
+            if (trait && trait.get('label') !== label) {
               trait.set('label', label);
             }
 
@@ -261,10 +242,17 @@ export default function Editor() {
               this.set('canGroup', canGroup);
             }
 
-            this.bindGroupCollections();
+            if (!canGroup) {
+              if (currentUseGroup) {
+                this.setUseGroupTrait(false, { fromStateUpdate: true });
+              } else if (hasGroup) {
+                this.unwrapColumnsFromGroups();
+              }
+              return;
+            }
 
-            if (!canGroup && this.get(GROUP_TRAIT_NAME)) {
-              this.setUseGroupTrait(false, { fromStateUpdate: true });
+            if (hasGroup !== currentUseGroup) {
+              this.setUseGroupTrait(hasGroup, { fromStateUpdate: true });
             }
           },
 
@@ -273,7 +261,7 @@ export default function Editor() {
             _model: GrapesComponent,
             value: boolean,
             options?: GroupChangeOptions,
-          ): void {
+          ) {
             const changeOptions = options ?? {};
             const wantsGroup = Boolean(value);
             const canGroup = this.canGroupColumns();
@@ -289,7 +277,6 @@ export default function Editor() {
                 if (this.get(GROUP_TRAIT_NAME)) {
                   this.setUseGroupTrait(false, { fromGuard: true });
                 }
-
                 return;
               }
 
@@ -298,9 +285,7 @@ export default function Editor() {
 
               if (group && triggeredByUser) {
                 const editorInstance = this.em;
-                if (editorInstance && typeof editorInstance.setSelected === 'function') {
-                  editorInstance.setSelected(group);
-                }
+                editorInstance?.setSelected?.(group);
               }
 
               return;
@@ -310,54 +295,53 @@ export default function Editor() {
             this.updateGroupTraitState();
           },
 
-          wrapColumnsIntoGroup(this: SectionModel): GrapesComponent | null {
+          wrapColumnsIntoGroup(this: SectionModel) {
             const orderedColumns = this.getOrderedColumns();
-            const groups = this.getDirectGroups();
 
             if (!orderedColumns.length) {
-              groups.slice(1).forEach((group) => group.remove());
-              return groups[0] ?? null;
+              const [firstGroup, ...extraGroups] = this.getDirectGroups();
+              extraGroups.forEach((group) => group.remove());
+              return firstGroup ?? null;
             }
 
-            let targetGroup: GrapesComponent | null = groups[0] ?? null;
+            const directGroups = this.getDirectGroups();
+            let targetGroup: GrapesComponent | null =
+              directGroups.length > 0 ? directGroups[0] : null;
 
             if (!targetGroup) {
               const children = this.getSectionChildren();
-              const insertIndex = children.findIndex(
+              const insertionIndex = children.findIndex(
                 (child) => child.is('mj-column') || child.is('mj-group'),
               );
-              const atIndex = insertIndex >= 0 ? insertIndex : children.length;
-              const created = this.append({ type: 'mj-group' }, { at: atIndex }) as unknown;
+              const atIndex = insertionIndex >= 0 ? insertionIndex : children.length;
+              const created = this.append({ type: 'mj-group' }, { at: atIndex });
 
-              if (Array.isArray(created)) {
-                targetGroup = (created[0] as GrapesComponent | undefined) ?? null;
-              } else {
-                targetGroup = (created as GrapesComponent | undefined) ?? null;
-              }
+              targetGroup = Array.isArray(created)
+                ? ((created[0] as GrapesComponent | undefined) ?? null)
+                : ((created as GrapesComponent | undefined) ?? null);
             }
 
             if (!targetGroup) {
               return null;
             }
 
+            const group = targetGroup;
+
             orderedColumns.forEach((column, index) => {
-              targetGroup.append(column, { at: index });
+              group.append(column, { at: index });
             });
 
             this.getDirectGroups()
-              .filter((group) => group !== targetGroup)
+              .filter((existingGroup) => existingGroup !== group)
               .forEach((extraGroup) => extraGroup.remove());
 
-            return targetGroup;
+            return group;
           },
 
-          unwrapColumnsFromGroups(this: SectionModel): void {
+          unwrapColumnsFromGroups(this: SectionModel) {
             const groups = this.getDirectGroups();
 
             groups.forEach((group) => {
-              const groupColumns = collectionToArray(group.components()).filter((child) =>
-                child.is('mj-column'),
-              );
               const sectionChildren = this.getSectionChildren();
               let insertIndex = sectionChildren.indexOf(group);
 
@@ -365,10 +349,12 @@ export default function Editor() {
                 insertIndex = sectionChildren.length;
               }
 
-              groupColumns.forEach((column) => {
-                this.append(column, { at: insertIndex });
-                insertIndex += 1;
-              });
+              collectionToArray(group.components())
+                .filter((child) => child.is('mj-column'))
+                .forEach((column) => {
+                  this.append(column, { at: insertIndex });
+                  insertIndex += 1;
+                });
 
               group.remove();
             });
@@ -380,7 +366,7 @@ export default function Editor() {
       );
 
       domComponents.addType('mj-section', {
-        model: sectionModel,
+        model: SectionModel,
         view: baseSectionType.view,
       });
     };
