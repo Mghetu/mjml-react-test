@@ -476,3 +476,45 @@
 .layers-panel::-webkit-scrollbar-thumb:hover {
   background: var(--gjs-secondary-light-color);
 }
+
+/* Fix for MJML components with zero padding disappearing from canvas */
+.gjs-frame iframe,
+.gjs-frame [data-gjs-type="mj-body"],
+.gjs-frame [data-gjs-type="mj-wrapper"],
+.gjs-frame [data-gjs-type="mj-section"],
+.gjs-frame [data-gjs-type="mj-group"],
+.gjs-frame [data-gjs-type="mj-column"] {
+  min-height: 20px !important;
+}
+
+/* Ensure MJML wrapper components are visible even with padding: 0 */
+.gjs-frame [data-gjs-type="mj-body"][style*="padding: 0"],
+.gjs-frame [data-gjs-type="mj-body"][style*="padding:0"],
+.gjs-frame [data-gjs-type="mj-wrapper"][style*="padding: 0"],
+.gjs-frame [data-gjs-type="mj-wrapper"][style*="padding:0"],
+.gjs-frame [data-gjs-type="mj-section"][style*="padding: 0"],
+.gjs-frame [data-gjs-type="mj-section"][style*="padding:0"],
+.gjs-frame [data-gjs-type="mj-group"][style*="padding: 0"],
+.gjs-frame [data-gjs-type="mj-group"][style*="padding:0"] {
+  min-height: 40px !important;
+  outline: 1px dashed rgba(150, 150, 150, 0.3) !important;
+  position: relative !important;
+}
+
+/* Add visual indicator for empty components with zero padding */
+.gjs-frame [data-gjs-type="mj-body"][style*="padding: 0"]:empty::before,
+.gjs-frame [data-gjs-type="mj-body"][style*="padding:0"]:empty::before,
+.gjs-frame [data-gjs-type="mj-wrapper"][style*="padding: 0"]:empty::before,
+.gjs-frame [data-gjs-type="mj-wrapper"][style*="padding:0"]:empty::before,
+.gjs-frame [data-gjs-type="mj-section"][style*="padding: 0"]:empty::before,
+.gjs-frame [data-gjs-type="mj-section"][style*="padding:0"]:empty::before,
+.gjs-frame [data-gjs-type="mj-group"][style*="padding: 0"]:empty::before,
+.gjs-frame [data-gjs-type="mj-group"][style*="padding:0"]:empty::before {
+  content: "Empty component (padding: 0)";
+  display: block;
+  padding: 8px;
+  color: #999;
+  font-size: 11px;
+  font-style: italic;
+  text-align: center;
+}
