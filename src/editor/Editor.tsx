@@ -9,6 +9,9 @@ import LeftSidebar from './components/LeftSidebar';
 import RightSidebar from './components/RightSidebar';
 import { sanitizeMjmlMarkup } from './utils/mjml';
 
+// ✅ ADD THIS IMPORT my_IMPORT one line
+import { fixMjWrapper } from './patches/fixMjWrapper';
+
 import 'grapesjs/dist/css/grapes.min.css';
 import './editor.css';
 
@@ -27,6 +30,9 @@ export default function Editor() {
 
   const handleEditorReady = useCallback((editor: GrapesEditor) => {
     editorRef.current = editor;
+
+     // ✅ APPLY THE PATCH ASAP (safe to call multiple times) my_IMPORT one line
+    fixMjWrapper(editor);
 
     (window as unknown as { editor?: GrapesEditor }).editor = editor;
     console.log('Editor loaded with React UI');
