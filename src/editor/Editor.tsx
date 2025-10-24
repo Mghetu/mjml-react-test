@@ -370,7 +370,8 @@ const initialTemplate = [
   '    </mj-section>',
   '  </mj-body>',
   '</mjml>',
-].join('\\n');
+].join('\n');
+
 
 
     const applyStarterTemplateIfEmpty = () => {
