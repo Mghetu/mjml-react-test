@@ -1,6 +1,6 @@
 // src/editor/Editor.tsx
 import { useCallback, useEffect, useRef } from 'react';
-import grapesjs, { type Editor as GrapesEditor } from 'grapesjs';
+import grapesjs, { type Component as GjsComponent, type Editor as GrapesEditor } from 'grapesjs';
 import GjsEditor, { Canvas, WithEditor } from '@grapesjs/react';
 import mjmlPlugin from 'grapesjs-mjml';
 
@@ -8,6 +8,7 @@ import Topbar from './components/Topbar';
 import LeftSidebar from './components/LeftSidebar';
 import RightSidebar from './components/RightSidebar';
 import { sanitizeMjmlMarkup } from './utils/mjml';
+import { deepSanitize, sanitizeComponentAttributes, sanitizeComponentStyles } from './sanitizeAttributes';
 
 // ✅ ADD THIS IMPORT my_IMPORT one line
 import { fixMjWrapper } from './patches/fixMjWrapper';
@@ -36,6 +37,11 @@ export default function Editor() {
 
     (window as unknown as { editor?: GrapesEditor }).editor = editor;
     console.log('Editor loaded with React UI');
+
+    const wrapperComponent = editor.DomComponents.getWrapper();
+    if (wrapperComponent) {
+      deepSanitize(wrapperComponent);
+    }
 
     type UnknownComponent = {
       set?: (props: Record<string, unknown>) => void;
@@ -393,6 +399,11 @@ const initialTemplate = [
 
     // Add custom visual styling for native mj-group components
     editor.on('load', () => {
+      const rootComponent = editor.DomComponents.getWrapper();
+      if (rootComponent) {
+        deepSanitize(rootComponent);
+      }
+
       applyStarterTemplateIfEmpty();
       const style = document.createElement('style');
       style.textContent = `
@@ -468,7 +479,17 @@ const initialTemplate = [
       setTimeout(ensureMjBodyPresence, 0);
     });
     editor.on('component:add', (component) => {
+      deepSanitize(component as GjsComponent);
       ensureComponentInMjBody(component as UnknownComponent);
+    });
+
+    editor.on('component:update:attributes', (component) => {
+      sanitizeComponentAttributes(component as GjsComponent);
+    });
+
+    editor.on('component:styleUpdate', (component) => {
+      sanitizeComponentStyles(component as GjsComponent);
+      sanitizeComponentAttributes(component as GjsComponent);
     });
 
     console.log('Tip: mj-group contains columns that stay side-by-side on mobile (instead of stacking)');
