@@ -22,14 +22,16 @@ export default function registerPrebuiltBlocks(editor: Editor) {
 
   // ===== MEM (examples) =====
   add(
-    'mem-two-col',
-    'MEM · Two Columns',
+    'header with logo',
+    'MEM · header with logo',
     'MEM',
     `
-<mj-section>
-  <mj-column><mj-text>Left column</mj-text></mj-column>
-  <mj-column><mj-text>Right column</mj-text></mj-column>
-</mj-section>`
+ <mj-section padding-top="10px" padding-bottom="10px" text-align="left" background-color="#000000">
+        <mj-column padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+          <mj-image src="https://placehold.co/170x60" padding-top="0px" padding-bottom="0px" align="left" width="170px">
+          </mj-image>
+        </mj-column>
+  </mj-section>`
   );
 
   add(
@@ -37,12 +39,80 @@ export default function registerPrebuiltBlocks(editor: Editor) {
     'MEM · Hero',
     'MEM',
     `
-<mj-hero height="300px" mode="fixed-height" background-url="https://via.placeholder.com/1200x300" background-size="cover" background-position="center">
-  <mj-text align="center" color="#ffffff" font-size="24px" font-weight="700">MEM Hero</mj-text>
-  <mj-button href="#" background-color="#111827" color="#ffffff" inner-padding="12px 24px">Call to Action</mj-button>
-</mj-hero>`
+  <mj-section padding-top="0px" padding-bottom="0px">
+        <mj-column padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+          <mj-text font-family="Aptos, Calibri, sans-serif" font-size="10px" color="#8f8f8f">Market Eminence Monitor | For internal use only
+          </mj-text>
+        </mj-column>
+      </mj-section>
+      <mj-section padding-top="0px" padding-bottom="0px">
+        <mj-column padding-top="0px" padding-bottom="0px" padding-left="0px" padding-right="0px">
+          <mj-image src="https://placehold.co/600x300" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+          </mj-image>
+        </mj-column>
+      </mj-section>
+      <mj-section padding-top="10px" padding-bottom="10px" background-color="#ffffff">
+        <mj-column>
+          <mj-text font-size="32px" font-family="Aptos, Calibri, sans-serif" font-weight="700">Market Eminence Monitor
+          </mj-text>
+          <mj-text font-family="Aptos, Calibri, sans-serif">Our sushi bar has some amazing sushi with great variety, as well as dishes from other Asian regions including Korea, Japan, Thailand and Cambodia. We get our ingredients from local producers whenever possible.
+          </mj-text>
+        </mj-column>
+      </mj-section>`
   );
 
+
+ add(
+    'Mem numbers',
+    'MEM · numbers',
+    'MEM',
+    `
+   <mj-section padding-top="0px" padding-bottom="0px">
+        <mj-column>
+          <mj-text font-family="Aptos, Calibri, sans-serif" font-weight="700">FY26 Numbers to Date  
+          </mj-text>
+        </mj-column>
+      </mj-section>
+      <mj-section padding-top="5px" padding-bottom="5px">
+        <mj-group>
+          <mj-column padding-top="0px" padding-bottom="0px" padding-right="10px" padding-left="0px">
+            <mj-image src="https://placehold.co/150x80" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+            </mj-image>
+          </mj-column>
+          <mj-column padding-top="0px" padding-bottom="0px" padding-right="5px" padding-left="5px">
+            <mj-image src="https://placehold.co/150x80" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+            </mj-image>
+          </mj-column>
+          <mj-column padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="10px">
+            <mj-image src="https://placehold.co/150x80" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+            </mj-image>
+          </mj-column>
+        </mj-group>
+      </mj-section>
+      <mj-section padding-top="5px" padding-bottom="0px">
+        <mj-group>
+          <mj-column padding-top="0px" padding-bottom="0px" padding-right="10px" padding-left="0px">
+            <mj-image src="https://placehold.co/150x80" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+            </mj-image>
+          </mj-column>
+          <mj-column padding-top="0px" padding-bottom="0px" padding-right="5px" padding-left="5px">
+            <mj-image src="https://placehold.co/150x80" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+            </mj-image>
+          </mj-column>
+          <mj-column padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="10px">
+            <mj-image src="https://placehold.co/150x80" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+            </mj-image>
+          </mj-column>
+        </mj-group>
+      </mj-section>`
+  );
+
+  
+
+
+
+
+  
   // ===== ERDC (examples) =====
   add(
     'erdc-cta',
