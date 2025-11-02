@@ -40,36 +40,62 @@ export default function Editor() {
     console.log('Editor loaded with React UI');
 
     editor.on('load', () => {
-      const categoriesRaw = editor.Blocks.getCategories?.();
+      type BlockCategoryModel = {
+        set?: (key: string, value: unknown) => void;
+        get?: (key: string) => unknown;
+        on?: (event: string, callback: (...args: unknown[]) => void) => void;
+        off?: (event: string, callback: (...args: unknown[]) => void) => void;
+        open?: unknown;
+      };
 
-      if (!Array.isArray(categoriesRaw)) {
+      const toCategoryArray = (collection: unknown): BlockCategoryModel[] => {
+        if (!collection) {
+          return [];
+        }
+
+        if (Array.isArray(collection)) {
+          return collection as BlockCategoryModel[];
+        }
+
+        if (typeof collection === 'object') {
+          const record = collection as Record<string, unknown>;
+          const maybeModels = record.models;
+
+          if (Array.isArray(maybeModels)) {
+            return maybeModels as BlockCategoryModel[];
+          }
+
+          const maybeToArray = record.toArray as (() => unknown) | undefined;
+          if (typeof maybeToArray === 'function') {
+            const arrayResult = maybeToArray.call(collection) as unknown;
+            if (Array.isArray(arrayResult)) {
+              return arrayResult as BlockCategoryModel[];
+            }
+          }
+        }
+
+        return [];
+      };
+
+      const categories = toCategoryArray(editor.Blocks.getCategories?.());
+
+      if (!categories.length) {
         return;
       }
 
-      const categories = categoriesRaw as unknown[];
+      categories.forEach((category) => {
+        if (typeof category.set === 'function') {
+          category.set('open', false);
+          return;
+        }
 
-      categories.forEach((category: unknown) => {
-        const typedCategory = category as {
-          set?: (key: string, value: unknown) => void;
-          open?: unknown;
-        };
-
-        if (typeof typedCategory.set === 'function') {
-          typedCategory.set('open', false);
-        } else if ('open' in typedCategory) {
-          typedCategory.open = false;
+        if ('open' in category) {
+          category.open = false;
         }
       });
 
-      categories.forEach((category: unknown) => {
-        const typedCategory = category as {
-          on?: (event: string, callback: (...args: unknown[]) => void) => void;
-          get?: (key: string) => unknown;
-          set?: (key: string, value: unknown) => void;
-          open?: unknown;
-        };
-
-        if (typeof typedCategory.on !== 'function') {
+      categories.forEach((category, _index, allCategories) => {
+        if (typeof category.on !== 'function') {
           return;
         }
 
@@ -78,35 +104,29 @@ export default function Editor() {
             return;
           }
 
-          categories.forEach((otherCategory: unknown) => {
+          allCategories.forEach((otherCategory) => {
             if (otherCategory === category) {
               return;
             }
 
-            const otherTyped = otherCategory as {
-              get?: (key: string) => unknown;
-              set?: (key: string, value: unknown) => void;
-              open?: unknown;
-            };
-
             const otherIsOpen =
-              typeof otherTyped.get === 'function'
-                ? otherTyped.get('open')
-                : otherTyped.open;
+              typeof otherCategory.get === 'function'
+                ? otherCategory.get('open')
+                : otherCategory.open;
 
             if (!otherIsOpen) {
               return;
             }
 
-            if (typeof otherTyped.set === 'function') {
-              otherTyped.set('open', false);
-            } else if ('open' in otherTyped) {
-              otherTyped.open = false;
+            if (typeof otherCategory.set === 'function') {
+              otherCategory.set('open', false);
+            } else if ('open' in otherCategory) {
+              otherCategory.open = false;
             }
           });
         };
 
-        typedCategory.on('change:open', handleCategoryOpenChange);
+        category.on('change:open', handleCategoryOpenChange);
       });
     });
 
