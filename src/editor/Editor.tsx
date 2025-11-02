@@ -39,6 +39,57 @@ export default function Editor() {
     (window as unknown as { editor?: GrapesEditor }).editor = editor;
     console.log('Editor loaded with React UI');
 
+    editor.on('load', () => {
+      type BlockCategoryModel = {
+        set?: (key: string, value: unknown) => void;
+        open?: unknown;
+      };
+
+      const toCategoryArray = (collection: unknown): BlockCategoryModel[] => {
+        if (!collection) {
+          return [];
+        }
+
+        if (Array.isArray(collection)) {
+          return collection as BlockCategoryModel[];
+        }
+
+        if (typeof collection === 'object') {
+          const record = collection as Record<string, unknown>;
+          const maybeModels = record.models;
+
+          if (Array.isArray(maybeModels)) {
+            return maybeModels as BlockCategoryModel[];
+          }
+
+          const maybeToArray = record.toArray as (() => unknown) | undefined;
+          if (typeof maybeToArray === 'function') {
+            const arrayResult = maybeToArray.call(collection) as unknown;
+            if (Array.isArray(arrayResult)) {
+              return arrayResult as BlockCategoryModel[];
+            }
+          }
+        }
+
+        return [];
+      };
+
+      const categories = toCategoryArray(editor.Blocks.getCategories?.());
+
+      categories.forEach((category, index) => {
+        const shouldOpen = index === 0;
+
+        if (typeof category.set === 'function') {
+          category.set('open', shouldOpen);
+          return;
+        }
+
+        if ('open' in category) {
+          category.open = shouldOpen;
+        }
+      });
+    });
+
     const wrapperComponent = editor.DomComponents.getWrapper();
     if (wrapperComponent) {
       deepSanitize(wrapperComponent);
