@@ -42,9 +42,6 @@ export default function Editor() {
     editor.on('load', () => {
       type BlockCategoryModel = {
         set?: (key: string, value: unknown) => void;
-        get?: (key: string) => unknown;
-        on?: (event: string, callback: (...args: unknown[]) => void) => void;
-        off?: (event: string, callback: (...args: unknown[]) => void) => void;
         open?: unknown;
       };
 
@@ -79,54 +76,17 @@ export default function Editor() {
 
       const categories = toCategoryArray(editor.Blocks.getCategories?.());
 
-      if (!categories.length) {
-        return;
-      }
+      categories.forEach((category, index) => {
+        const shouldOpen = index === 0;
 
-      categories.forEach((category) => {
         if (typeof category.set === 'function') {
-          category.set('open', false);
+          category.set('open', shouldOpen);
           return;
         }
 
         if ('open' in category) {
-          category.open = false;
+          category.open = shouldOpen;
         }
-      });
-
-      categories.forEach((category, _index, allCategories) => {
-        if (typeof category.on !== 'function') {
-          return;
-        }
-
-        const handleCategoryOpenChange = (_: unknown, isOpen: unknown) => {
-          if (!isOpen) {
-            return;
-          }
-
-          allCategories.forEach((otherCategory) => {
-            if (otherCategory === category) {
-              return;
-            }
-
-            const otherIsOpen =
-              typeof otherCategory.get === 'function'
-                ? otherCategory.get('open')
-                : otherCategory.open;
-
-            if (!otherIsOpen) {
-              return;
-            }
-
-            if (typeof otherCategory.set === 'function') {
-              otherCategory.set('open', false);
-            } else if ('open' in otherCategory) {
-              otherCategory.open = false;
-            }
-          });
-        };
-
-        category.on('change:open', handleCategoryOpenChange);
       });
     });
 
