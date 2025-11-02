@@ -39,6 +39,77 @@ export default function Editor() {
     (window as unknown as { editor?: GrapesEditor }).editor = editor;
     console.log('Editor loaded with React UI');
 
+    editor.on('load', () => {
+      const categoriesRaw = editor.Blocks.getCategories?.();
+
+      if (!Array.isArray(categoriesRaw)) {
+        return;
+      }
+
+      const categories = categoriesRaw as unknown[];
+
+      categories.forEach((category: unknown) => {
+        const typedCategory = category as {
+          set?: (key: string, value: unknown) => void;
+          open?: unknown;
+        };
+
+        if (typeof typedCategory.set === 'function') {
+          typedCategory.set('open', false);
+        } else if ('open' in typedCategory) {
+          typedCategory.open = false;
+        }
+      });
+
+      categories.forEach((category: unknown) => {
+        const typedCategory = category as {
+          on?: (event: string, callback: (...args: unknown[]) => void) => void;
+          get?: (key: string) => unknown;
+          set?: (key: string, value: unknown) => void;
+          open?: unknown;
+        };
+
+        if (typeof typedCategory.on !== 'function') {
+          return;
+        }
+
+        const handleCategoryOpenChange = (_: unknown, isOpen: unknown) => {
+          if (!isOpen) {
+            return;
+          }
+
+          categories.forEach((otherCategory: unknown) => {
+            if (otherCategory === category) {
+              return;
+            }
+
+            const otherTyped = otherCategory as {
+              get?: (key: string) => unknown;
+              set?: (key: string, value: unknown) => void;
+              open?: unknown;
+            };
+
+            const otherIsOpen =
+              typeof otherTyped.get === 'function'
+                ? otherTyped.get('open')
+                : otherTyped.open;
+
+            if (!otherIsOpen) {
+              return;
+            }
+
+            if (typeof otherTyped.set === 'function') {
+              otherTyped.set('open', false);
+            } else if ('open' in otherTyped) {
+              otherTyped.open = false;
+            }
+          });
+        };
+
+        typedCategory.on('change:open', handleCategoryOpenChange);
+      });
+    });
+
     const wrapperComponent = editor.DomComponents.getWrapper();
     if (wrapperComponent) {
       deepSanitize(wrapperComponent);
