@@ -9,6 +9,8 @@ import LeftSidebar from './components/LeftSidebar';
 import RightSidebar from './components/RightSidebar';
 import { sanitizeMjmlMarkup } from './utils/mjml';
 import { deepSanitize, sanitizeComponentAttributes, sanitizeComponentStyles } from './sanitizeAttributes';
+import registerPrebuiltBlocks from './plugins/registerPrebuiltBlocks';
+import { CATEGORY } from './constants/categories';
 
 // ✅ ADD THIS IMPORT my_IMPORT one line
 import { fixMjWrapper } from './patches/fixMjWrapper';
@@ -425,6 +427,25 @@ const initialTemplate = [
 
     // Add custom visual styling for native mj-group components
     editor.on('load', () => {
+      registerPrebuiltBlocks(editor);
+
+      const desiredCategories = [CATEGORY.MEM, CATEGORY.ERDC];
+      const categoriesCollection = editor.BlockManager.getCategories();
+      const categoriesArray = Array.isArray(categoriesCollection)
+        ? categoriesCollection
+        : Array.isArray((categoriesCollection as { models?: unknown[] } | undefined)?.models)
+          ? ((categoriesCollection as { models: unknown[] }).models as unknown[])
+          : [];
+
+      desiredCategories.forEach((label) => {
+        const category = categoriesArray.find(
+          (candidate) =>
+            (candidate as { get?: (key: string) => unknown })?.get?.('label') === label,
+        ) as { set?: (key: string, value: unknown) => void } | undefined;
+
+        category?.set?.('open', true);
+      });
+
       const rootComponent = editor.DomComponents.getWrapper();
       if (rootComponent) {
         deepSanitize(rootComponent);
