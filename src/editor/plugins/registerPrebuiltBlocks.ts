@@ -109,9 +109,253 @@ export default function registerPrebuiltBlocks(editor: Editor) {
 
   
 
+  add(
+    'MEM-category',
+    'MEM · category',
+    'MEM',
+    `
+ <mj-section padding-top="0px" padding-bottom="0px">
+        <mj-column vertical-align="bottom" padding-right="0px" padding-left="0px" padding-bottom="0px" padding-top="16px">
+          <mj-divider padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" border-color="#8db924">
+          </mj-divider>
+        </mj-column>
+      </mj-section>
+      <mj-section padding-left="25px" padding-right="25px" background-color="#ffffff">
+        <mj-group>
+          <mj-column padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" width="10%">
+            <mj-image src="https://placehold.co/50x50" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" align="left" width="60px">
+            </mj-image>
+          </mj-column>
+          <mj-column width="90%" padding-top="0px" padding-bottom="0px" padding-left="0px" padding-right="0px">
+            <mj-text padding-top="0px" padding-bottom="0px" padding-left="20px" font-size="28px" font-family="Aptos, Calibri, sans-serif" font-weight="700">Press Releases 
+            </mj-text>
+            <mj-text padding-top="5px" padding-bottom="0px" padding-left="20px" font-size="16px" font-family="Aptos, Calibri, sans-serif" font-weight="700" color="#a8a8a8">Published x-y month
+            </mj-text>
+          </mj-column>
+        </mj-group>
+      </mj-section>`
+  );
 
 
 
+  add(
+    'MEM-press-release-item',
+    'MEM · press release item',
+    'MEM',
+    `
+  <mj-section padding-left="25px" padding-right="25px" padding-top="10px" padding-bottom="0px" background-color="#ffffff">
+        <mj-column width="100%" padding-top="0px" padding-bottom="5px" padding-right="0px" padding-left="0px">
+          <mj-image src="https://placehold.co/600x80" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+          </mj-image>
+        </mj-column>
+      </mj-section>
+      <mj-section padding-left="25px" padding-right="25px" padding-top="0px" padding-bottom="10px" background-color="#ffffff">
+        <mj-column width="100%" padding-top="0px" padding-right="0px" padding-bottom="0px" padding-left="0px">
+          <mj-text padding-top="0px" padding-bottom="3px" padding-left="10px" font-family="Aptos, Calibri, sans-serif" font-size="16px" font-weight="700">Ionescu Popescu- function &amp; Ionescu Popescu- function
+          </mj-text>
+          <mj-text padding-top="0px" padding-bottom="3px" padding-left="10px" font-family="Aptos, Calibri, sans-serif" font-size="14px" font-weight="700" color="#767676">The evolving role of consultants in the AI era and add very long title here
+          </mj-text>
+          <mj-text padding-top="0px" padding-bottom="3px" padding-left="10px" color="#5849e4" text-decoration="underline" font-family="Aptos, Calibri, sans-serif" font-size="12px" font-weight="500">vezi articol &gt;
+          </mj-text>
+        </mj-column>
+      </mj-section>
+      <mj-section padding-top="0px" padding-bottom="0px" background-color="#ffffff">
+        <mj-column padding-top="5px" padding-bottom="5px" padding-right="0px" padding-left="0px">
+          <mj-divider border-width="1px" border-color="#dbdbdb" padding-top="5px" padding-bottom="5px">
+          </mj-divider>
+        </mj-column>
+      </mj-section>`
+  );
+
+
+
+ add(
+    'MEM-end-of-section-2-banners',
+    'MEM · 2-banners',
+    'MEM',
+    `
+ <mj-section padding-top="10px" padding-bottom="0px" background-color="#ffffff">
+        <mj-group>
+          <mj-column width="50%" padding-top="0px" padding-bottom="0px">
+            <mj-image src="https://placehold.co/300x80" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+            </mj-image>
+          </mj-column>
+          <mj-column width="50%" padding-top="0px" padding-bottom="0px">
+            <mj-image src="https://placehold.co/300x80" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+            </mj-image>
+          </mj-column>
+        </mj-group>
+      </mj-section>`
+  );
+
+
+
+ add(
+    'MEM-Opinion-Articles-item',
+    'MEM · Opinion Articles item',
+    'MEM',
+    `
+   <mj-section padding-left="25px" padding-right="25px" padding-top="10px" padding-bottom="10px" background-color="#ffffff">
+        <mj-group>
+          <mj-column width="40%" vertical-align="middle" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+            <mj-image src="https://placehold.co/200x110" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" align="left">
+            </mj-image>
+          </mj-column>
+          <mj-column width="60%" vertical-align="middle" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+            <mj-text padding-top="0px" padding-bottom="3px" padding-right="10px" padding-left="10px" font-family="Aptos, Calibri, sans-serif" font-size="16px" font-weight="700">Ionescu Popescu- function &amp; Ionescu Popescu- function &amp; Ionescu Popescu- function &amp; Ionescu Popescu- function &amp; Ionescu Popescu- function &amp;
+            </mj-text>
+            <mj-text padding-top="0px" padding-bottom="3px" padding-right="10px" padding-left="10px" font-family="Aptos, Calibri, sans-serif" font-size="14px" font-weight="700" color="#767676">Titlu press release, dsadsad dsadsadsd dsadsada, dsasdad, dsasadadadsa, dsaadda,
+            </mj-text>
+            <mj-text padding-top="0px" padding-bottom="3px" padding-right="10px" padding-left="10px" color="#5849e4" text-decoration="underline" font-family="Aptos, Calibri, sans-serif" font-size="12px" font-weight="500">vezi articol &gt;
+            </mj-text>
+          </mj-column>
+        </mj-group>
+      </mj-section>`
+  );
+
+  
+
+ add(
+    'MEM-Third-Party-Events-item',
+    'MEM · Third Party Events item',
+    'MEM',
+    `
+   <mj-section padding-left="25px" padding-right="25px" padding-top="10px" padding-bottom="10px" background-color="#ffffff">
+        <mj-group>
+          <mj-column width="70%" padding-right="10px" padding-top="0px" padding-bottom="0px" padding-left="0px">
+            <mj-text padding-top="0px" color="#a4a4a4" padding-bottom="3px" padding-right="0px" font-family="Aptos, Calibri, sans-serif" font-weight="700" font-size="16px" padding-left="0px">15 sept 2025  | 15:00 
+            </mj-text>
+            <mj-text padding-top="0px" color="#3d3d3d" padding-bottom="3px" padding-right="0px" font-family="Aptos, Calibri, sans-serif" font-size="14px" font-weight="700" padding-left="0px">Titlu press release, dsadsad dsadsadsd dsadsada, dsasdad, dsasadadadsa, dsaadda,
+            </mj-text>
+            <mj-text padding-top="0px" padding-bottom="5px" padding-right="0px" font-family="Aptos, Calibri, sans-serif" color="#000000" padding-left="0px" font-weight="700" font-size="14px">Nume and function purtator de mesaj
+            </mj-text>
+            <mj-text padding-top="0px" color="#000000" padding-bottom="3px" padding-right="0px" font-family="Aptos, Calibri, sans-serif" padding-left="0px" font-size="14px">Marketing contact
+            </mj-text>
+          </mj-column>
+          <mj-column width="30%" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+            <mj-image src="https://placehold.co/200x100" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" align="left">
+            </mj-image>
+          </mj-column>
+        </mj-group>
+      </mj-section>`
+  );
+
+
+ add(
+    'MEM-Deloitte-Events-item',
+    'MEM · Deloitte Events item',
+    'MEM',
+    `
+     <mj-section padding-left="25px" padding-right="25px" padding-top="10px" padding-bottom="10px" background-color="#ffffff">
+        <mj-column padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+          <mj-text padding-top="0px" padding-bottom="3px" padding-left="0px" padding-right="0px" font-family="Aptos, Calibri, sans-serif" font-size="16px" font-weight="700" color="#a4a4a4">15 sept 2025  | 15:00 |
+          </mj-text>
+          <mj-text padding-top="0px" padding-bottom="3px" padding-left="0px" padding-right="0px" font-family="Aptos, Calibri, sans-serif" font-size="16px" font-weight="400">Titlu press release, dsadsad dsadsadsd dsadsada, dsasdad, dsasadadadsa, dsaadda,
+          </mj-text>
+          <mj-text padding-top="0px" padding-bottom="3px" padding-left="0px" padding-right="0px" font-family="Aptos, Calibri, sans-serif" font-size="14px" font-weight="700">Nume and function purtator de mesaj
+          </mj-text>
+          <mj-text padding-top="0px" padding-bottom="3px" padding-left="0px" padding-right="0px" font-family="Aptos, Calibri, sans-serif" font-size="14px" font-weight="400">Marketing contact
+          </mj-text>
+        </mj-column>
+      </mj-section>`
+  );
+  
+
+
+ add(
+    'MEM-end-of-section-1-banner',
+    'MEM · 1-banner',
+    'MEM',
+    `
+ <mj-section padding-top="10px" padding-bottom="0px" background-color="#ffffff">
+        <mj-column padding-top="0px" padding-bottom="0px">
+          <mj-image src="https://placehold.co/600x80" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+          </mj-image>
+        </mj-column>
+      </mj-section>`
+  );
+
+  
+ add(
+    'MEM-newsletter-banner',
+    'MEM · newsletter-banner',
+    'MEM',
+    `
+  <mj-section padding-left="25px" padding-right="25px" padding-top="10px" padding-bottom="10px" background-color="#ffffff">
+        <mj-column padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+          <mj-image src="https://placehold.co/600x80" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" border-radius="40px 40px 40px 40px">
+          </mj-image>
+        </mj-column>
+      </mj-section>`
+  );
+
+
+
+ add(
+    'MEM-SoMe-section-and-Mk-Leader',
+    'MEM · SoMe-section-and-Mk-Leader',
+    'MEM',
+    `
+     <mj-section padding-left="25px" padding-right="25px" padding-top="10px" padding-bottom="10px" background-color="#ffffff">
+        <mj-group>
+          <mj-column width="50%" padding-top="0px" padding-bottom="0px" padding-right="5px" padding-left="0px">
+            <mj-text padding-top="5px" padding-bottom="5px" padding-left="0px" font-size="16px" font-family="Aptos, Calibri, sans-serif" font-weight="700">Best performing 
+              <br/>Deloitte LinkedIn Post
+            </mj-text>
+            <mj-image src="https://placehold.co/330x330" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" align="left">
+            </mj-image>
+            <mj-divider border-width="2px" border-color="#b1b1b1" padding-right="0px" padding-left="0px">
+            </mj-divider>
+            <mj-text padding-top="5px" padding-bottom="5px" padding-left="0px" font-size="16px" font-family="Aptos, Calibri, sans-serif" font-weight="700">Check  our last Deloitte posts from last week here. 
+            </mj-text>
+            <mj-social font-size="12px" icon-size="24px" border-radius="12px" mode="horizontal" align="left" font-family="Aptos, Calibri, sans-serif" padding-left="0px">
+              <mj-social-element name="linkedin" background-color="#8db924">
+              </mj-social-element>
+              <mj-social-element name="facebook" background-color="#8db924">
+              </mj-social-element>
+              <mj-social-element name="facebook" background-color="#8db924">
+              </mj-social-element>
+              <mj-social-element name="instagram" background-color="#8db924">
+              </mj-social-element>
+            </mj-social>
+          </mj-column>
+          <mj-column width="50%" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="5px">
+            <mj-text padding-top="5px" padding-bottom="5px" padding-left="0px" font-size="16px" font-family="Aptos, Calibri, sans-serif" font-weight="700">Bet performing Reff &amp; Associates LinkedIn Post
+            </mj-text>
+            <mj-image src="https://placehold.co/330x330" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" align="left">
+            </mj-image>
+            <mj-divider border-width="2px" border-color="#b1b1b1" padding-right="0px" padding-left="0px">
+            </mj-divider>
+            <mj-text padding-top="5px" padding-bottom="5px" padding-left="0px" font-size="16px" font-family="Aptos, Calibri, sans-serif" font-weight="700">Check  our last R&amp;A posts from last week here. 
+            </mj-text>
+            <mj-social font-size="12px" icon-size="24px" border-radius="12px" mode="horizontal" align="left" font-family="Aptos, Calibri, sans-serif" padding-left="0px">
+              <mj-social-element name="linkedin" background-color="#00737f">
+              </mj-social-element>
+              <mj-social-element name="facebook" background-color="#00737f">
+              </mj-social-element>
+              <mj-social-element name="facebook" background-color="#00737f">
+              </mj-social-element>
+              <mj-social-element name="instagram" background-color="#00737f">
+              </mj-social-element>
+            </mj-social>
+          </mj-column>
+        </mj-group>
+      </mj-section>
+      <mj-section padding-top="0px" padding-bottom="0px">
+        <mj-column vertical-align="bottom" padding-right="0px" padding-left="0px" padding-bottom="0px" padding-top="16px">
+          <mj-divider padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+          </mj-divider>
+        </mj-column>
+      </mj-section>
+      <mj-section padding-top="0px" padding-bottom="0px">
+        <mj-column padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+          <mj-image src="https://placehold.co/600x300" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+          </mj-image>
+        </mj-column>
+      </mj-section>`
+  );
+
+  
   
   // ===== ERDC (examples) =====
   add(
