@@ -346,7 +346,7 @@ const initialTemplate = [
   '      </mj-section>',
   '',
   '      <!-- MULTI-COLUMN ROW -->',
-  '      <mj-section background-color="#FFFFFF" padding="16px 24px" border-radius="8px">',
+  '      <mj-section background-color="#FFFFFF" padding="16px 24px">',
   '        <mj-column>',
   '          <mj-text font-family="Aptos, Calibri, sans-serif" font-size="16px" font-weight="600" line-height="1.5" color="#262626" padding="0 0 8px">Left column</mj-text>',
   '          <mj-text font-family="Aptos, Calibri, sans-serif" font-size="16px" line-height="1.5" color="#262626" padding="0">Text, images, buttons…</mj-text>',
