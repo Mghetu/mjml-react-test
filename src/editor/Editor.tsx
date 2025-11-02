@@ -316,13 +316,13 @@ export default function Editor() {
 
 const initialTemplate = [
   '<mjml>',
-  '  <mj-body background-color="#F3F6F9">', // fallback; wrapper paints Outlook-safe bg',
+  '  <mj-body background-color="#F5F5F5">', // fallback; wrapper paints Outlook-safe bg',
   '',
   '    <!-- Outlook-safe page background + 20px side gap on mobile -->',
-  '    <mj-wrapper full-width="full-width" background-color="#F3F6F9" padding="24px 20px">', 
+  '    <mj-wrapper background-color="#F5F5F5" padding="24px 20px" full-width="full-width" padding-top="0px" padding-bottom="20px">', 
   '',
   '      <!-- HEADER / STRIP (600px centered via body width) -->',
-  '      <mj-section background-color="#86BD40" padding="12px 24px" border-radius="8px">',
+  '      <mj-section background-color="#86BD40" padding="12px 24px">',
   '        <mj-column>',
   '          <mj-text align="center" color="#FFFFFF" font-family="Aptos, Calibri, sans-serif" font-size="14px" line-height="1.5" padding="0">',
   '            Optional header strip',
