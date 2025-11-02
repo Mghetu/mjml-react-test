@@ -10,7 +10,6 @@ import RightSidebar from './components/RightSidebar';
 import { sanitizeMjmlMarkup } from './utils/mjml';
 import { deepSanitize, sanitizeComponentAttributes, sanitizeComponentStyles } from './sanitizeAttributes';
 import registerPrebuiltBlocks from './plugins/registerPrebuiltBlocks';
-import { CATEGORY } from './constants/categories';
 
 // ✅ ADD THIS IMPORT my_IMPORT one line
 import { fixMjWrapper } from './patches/fixMjWrapper';
@@ -429,7 +428,7 @@ const initialTemplate = [
     editor.on('load', () => {
       registerPrebuiltBlocks(editor);
 
-      const desiredCategories = [CATEGORY.MEM, CATEGORY.ERDC];
+      const desiredCategories = ['MEM', 'ERDC'];
       const categoriesCollection = editor.BlockManager.getCategories();
       const categoriesArray = Array.isArray(categoriesCollection)
         ? categoriesCollection
