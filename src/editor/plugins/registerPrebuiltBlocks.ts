@@ -296,7 +296,7 @@ export default function registerPrebuiltBlocks(editor: Editor) {
     'MEM · SoMe-section-and-Mk-Leader',
     'MEM',
     `
-     <mj-section padding-left="25px" padding-right="25px" padding-top="10px" padding-bottom="10px" background-color="#ffffff">
+      <mj-section padding-left="25px" padding-right="25px" padding-top="10px" padding-bottom="10px" background-color="#ffffff">
         <mj-group>
           <mj-column width="50%" padding-top="0px" padding-bottom="0px" padding-right="5px" padding-left="0px">
             <mj-text padding-top="5px" padding-bottom="5px" padding-left="0px" font-size="16px" font-family="Aptos, Calibri, sans-serif" font-weight="700">Best performing 
@@ -306,16 +306,16 @@ export default function registerPrebuiltBlocks(editor: Editor) {
             </mj-image>
             <mj-divider border-width="2px" border-color="#b1b1b1" padding-right="0px" padding-left="0px">
             </mj-divider>
-            <mj-text padding-top="5px" padding-bottom="5px" padding-left="0px" font-size="16px" font-family="Aptos, Calibri, sans-serif" font-weight="700">Check  our last Deloitte posts from last week here. 
+            <mj-text padding-top="5px" padding-bottom="5px" padding-left="0px" font-size="16px" font-family="Aptos, Calibri, sans-serif" font-weight="700">Check Deloitte Romania posts here
             </mj-text>
             <mj-social font-size="12px" icon-size="24px" border-radius="12px" mode="horizontal" align="left" font-family="Aptos, Calibri, sans-serif" padding-left="0px">
-              <mj-social-element name="linkedin" background-color="#8db924">
+              <mj-social-element name="linkedin" background-color="#8db924" href="https://bit.ly/4nIVdRD">
               </mj-social-element>
-              <mj-social-element name="facebook" background-color="#8db924">
+              <mj-social-element name="facebook" background-color="#8db924" href="https://bit.ly/47arNqp">
               </mj-social-element>
-              <mj-social-element name="facebook" background-color="#8db924">
+              <mj-social-element name="facebook" background-color="#8db924" href="https://bit.ly/3JsRbyu">
               </mj-social-element>
-              <mj-social-element name="instagram" background-color="#8db924">
+              <mj-social-element name="instagram" background-color="#8db924" href="https://bit.ly/4oaiJYx">
               </mj-social-element>
             </mj-social>
           </mj-column>
@@ -326,16 +326,12 @@ export default function registerPrebuiltBlocks(editor: Editor) {
             </mj-image>
             <mj-divider border-width="2px" border-color="#b1b1b1" padding-right="0px" padding-left="0px">
             </mj-divider>
-            <mj-text padding-top="5px" padding-bottom="5px" padding-left="0px" font-size="16px" font-family="Aptos, Calibri, sans-serif" font-weight="700">Check  our last R&amp;A posts from last week here. 
+            <mj-text padding-top="5px" padding-bottom="5px" padding-left="0px" font-size="16px" font-family="Aptos, Calibri, sans-serif" font-weight="700">Check Reff &amp; Associates posts here. 
             </mj-text>
             <mj-social font-size="12px" icon-size="24px" border-radius="12px" mode="horizontal" align="left" font-family="Aptos, Calibri, sans-serif" padding-left="0px">
-              <mj-social-element name="linkedin" background-color="#00737f">
+              <mj-social-element name="linkedin" background-color="#00737f" href="https://bit.ly/3JhNPOS">
               </mj-social-element>
-              <mj-social-element name="facebook" background-color="#00737f">
-              </mj-social-element>
-              <mj-social-element name="facebook" background-color="#00737f">
-              </mj-social-element>
-              <mj-social-element name="instagram" background-color="#00737f">
+              <mj-social-element name="facebook" background-color="#00737f" href="https://bit.ly/3Jsmqd3">
               </mj-social-element>
             </mj-social>
           </mj-column>
@@ -349,7 +345,7 @@ export default function registerPrebuiltBlocks(editor: Editor) {
       </mj-section>
       <mj-section padding-top="0px" padding-bottom="0px">
         <mj-column padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
-          <mj-image src="https://placehold.co/600x300" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+          <mj-image src="https://media.deloitte.com/is/image/deloitte/marketing_lead_100" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
           </mj-image>
         </mj-column>
       </mj-section>`
