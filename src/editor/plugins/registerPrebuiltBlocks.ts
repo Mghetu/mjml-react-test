@@ -47,7 +47,7 @@ export default function registerPrebuiltBlocks(editor: Editor) {
       </mj-section>
       <mj-section padding-top="0px" padding-bottom="0px">
         <mj-column padding-top="0px" padding-bottom="0px" padding-left="0px" padding-right="0px">
-          <mj-image src="https://placehold.co/600x300" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+          <mj-image src="https://media.deloitte.com/is/image/deloitte/Header_%20newsletter_MEM" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
           </mj-image>
         </mj-column>
       </mj-section>
