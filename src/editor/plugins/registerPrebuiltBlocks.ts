@@ -28,10 +28,10 @@ export default function registerPrebuiltBlocks(editor: Editor) {
     `
  <mj-section padding-top="10px" padding-bottom="10px" text-align="left" background-color="#000000">
         <mj-column padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
-          <mj-image src="https://placehold.co/170x60" padding-top="0px" padding-bottom="0px" align="left" width="170px">
+          <mj-image src="https://media.deloitte.com/is/image/deloitte/Logo_Deloitte_newsletter_MEM_101" padding-top="0px" padding-bottom="0px" align="left" width="170px">
           </mj-image>
         </mj-column>
-  </mj-section>`
+      </mj-section>`
   );
 
   add(
