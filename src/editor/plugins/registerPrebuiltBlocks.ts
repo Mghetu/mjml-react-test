@@ -357,7 +357,7 @@ add(
     'MEM · SEE-banner',
     'MEM',
     `
- <mj-section padding-top="10px" padding-bottom="0px" background-color="#f5f5f5">
+  <mj-section padding-top="10px" padding-bottom="0px" background-color="#f5f5f5">
         <mj-column padding-top="0px" padding-bottom="0px">
           <mj-image src="https://media.deloitte.com/is/image/deloitte/SEE_Cluster_MEM_101" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
           </mj-image>
@@ -365,12 +365,12 @@ add(
       </mj-section>
       <mj-section padding-top="0px" padding-bottom="0px" background-color="#ffffff">
         <mj-column width="50%" padding-top="0px" padding-bottom="0px">
-          <mj-button padding-right="10px" padding-left="10px" border-radius="0px 0 0 0" background-color="#ffffff" border="0px none black" href="https://bit.ly/4i3GGi2">
+          <mj-button padding-right="10px" padding-left="10px" border-radius="0px 0 0 0" background-color="#ffffff" border="0px none black" href="https://bit.ly/482TEIj">
             <span data-teams="true" style="color:#86bd40;font-weight:700;font-size:18px;text-decoration:underline;align:center;font-family:Aptos, Calibri, sans-serif;">HUN</span>
           </mj-button>
         </mj-column>
         <mj-column width="50%" padding-top="0px" padding-bottom="0px">
-          <mj-button padding-right="10px" padding-left="10px" border-radius="0px 0 0 0" background-color="#ffffff" border="0px none black" href="https://bit.ly/47XQ41W">
+          <mj-button padding-right="10px" padding-left="10px" border-radius="0px 0 0 0" background-color="#ffffff" border="0px none black" href="https://bit.ly/4oDDSdL">
             <span data-teams="true" style="color:#86bd40;font-weight:700;font-size:18px;text-decoration:underline;align:center;font-family:Aptos, Calibri, sans-serif;">SOUTH</span>
           </mj-button>
         </mj-column>
