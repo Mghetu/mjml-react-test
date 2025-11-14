@@ -281,9 +281,9 @@ export default function registerPrebuiltBlocks(editor: Editor) {
     'MEM · newsletter-banner',
     'MEM',
     `
-  <mj-section padding-left="25px" padding-right="25px" padding-top="10px" padding-bottom="10px" background-color="#ffffff">
+ <mj-section padding-left="25px" padding-right="25px" padding-top="10px" padding-bottom="10px" background-color="#ffffff">
         <mj-column padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
-          <mj-image src="https://placehold.co/600x80" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" border-radius="40px 40px 40px 40px">
+          <mj-image src="https://media.deloitte.com/is/image/deloitte/Newsletters_all_banner_100" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" border-radius="40px 40px 40px 40px" href="https://bit.ly/3JCr1JE">
           </mj-image>
         </mj-column>
       </mj-section>`
