@@ -10,30 +10,38 @@ export function registerAnchorPlugin(editor: Editor) {
   }
 
   const RawModel = rawType.model;
+  const RawView = rawType.view;
 
   domc.addType('mj-anchor', {
     extend: 'mj-raw',
-    model: RawModel.extend({
-      defaults: {
-        ...RawModel.prototype.defaults,
-        tagName: 'mj-raw',
-        type: 'mj-anchor',
-        'custom-name': 'Anchor Target',
-        draggable: '[data-gjs-type="mj-column"], [data-gjs-type="mj-text"]',
-        droppable: false,
-        selectable: true,
-        highlightable: true,
-        anchorId: 'section-1',
-        traits: [
-          {
-            type: 'text',
-            name: 'anchorId',
-            label: 'Anchor ID',
-            placeholder: 'e.g. agenda, pricing, section-1',
-          },
-        ],
-        content: '',
-        attributes: {},
+    model: {
+      defaults(this: Component) {
+        const baseDefaults =
+          (typeof RawModel.prototype.defaults === 'function'
+            ? RawModel.prototype.defaults.call(this)
+            : RawModel.prototype.defaults) || {};
+
+        return {
+          ...baseDefaults,
+          tagName: 'mj-raw',
+          type: 'mj-anchor',
+          'custom-name': 'Anchor Target',
+          draggable: '[data-gjs-type="mj-column"], [data-gjs-type="mj-text"]',
+          droppable: false,
+          selectable: true,
+          highlightable: true,
+          anchorId: 'section-1',
+          traits: [
+            {
+              type: 'text',
+              name: 'anchorId',
+              label: 'Anchor ID',
+              placeholder: 'e.g. agenda, pricing, section-1',
+            },
+          ],
+          content: '',
+          attributes: {},
+        };
       },
 
       init(this: Component & { updateContent: () => void }) {
@@ -60,18 +68,22 @@ export function registerAnchorPlugin(editor: Editor) {
 
       getAttrToHTML(this: Component, ...args: unknown[]) {
         const attrs = RawModel.prototype.getAttrToHTML
-          ? RawModel.prototype.getAttrToHTML.apply(this, args)
-          : this.get('attributes');
+          ? { ...(RawModel.prototype.getAttrToHTML.apply(this, args) as Record<string, unknown>) }
+          : { ...((this.get('attributes') as Record<string, unknown> | undefined) || {}) };
 
-        if (attrs && typeof attrs === 'object') {
-          delete (attrs as Record<string, unknown>).anchorId;
-        }
+        delete (attrs as Record<string, unknown>).anchorId;
 
         return attrs;
       },
-    }),
+    },
 
-    view: {
+    view: RawView.extend?.({
+      onRender(this: ComponentView) {
+        const model = this.model as Component;
+        const anchorId = model.get('anchorId') || '';
+        this.el.setAttribute('data-anchor-id', anchorId);
+      },
+    }) || {
       onRender(this: ComponentView) {
         const model = this.model as Component;
         const anchorId = model.get('anchorId') || '';
