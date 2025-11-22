@@ -28,11 +28,45 @@ Additional architectural details and extension ideas are documented in [`docs/CO
    ```bash
    npm install
    ```
-2. Start the development server:
+2. Start the MJML conversion API (separate terminal):
+   ```bash
+   npm run server
+   ```
+3. Start the Vite development server:
    ```bash
    npm run dev
    ```
-3. Open the provided localhost URL in your browser to interact with the editor.
+4. Open the provided localhost URL in your browser to interact with the editor. Requests to `/api/convert-mjml` are proxied to the local MJML server running on port 3001 during development.
+
+### Verifying the conversion API locally
+Run the reproducibility script to confirm the backend responds with HTML:
+
+```bash
+node tests/convert-mjml.test.js
+```
+
+You should see `Status: 200` and a JSON body containing `html`. A 405 or an HTML error page usually means the request hit a static host instead of the Express server—start `npm run server` (or `npm run preview` after a build) to ensure the API is available on port 3001.
+
+### Single-process preview with API
+If you want to exercise the built app and the API on the same origin (avoids 405s from static hosts that do not forward `/api`), run:
+
+```bash
+npm run preview
+```
+
+`npm run preview` builds the frontend into `dist/` and serves both the static assets and the MJML API from the same Express server on port 3001.
+
+## MJML Conversion API
+- **Endpoint:** `POST /api/convert-mjml`
+- **Request body:** `{ "mjml": "<mjml markup>" }`
+- **Success response:** `{ "html": "<compiled html>" }`
+- **Validation errors:** Responds with HTTP 400 and `{ "errors": [...] }`.
+
+The server processes MJML in-memory only and does not persist email content.
+
+### What the Convert button sends
+- The **Convert MJML to HTML** button in the Templates panel sends the MJML currently on the canvas (via `editor.getHtml()`); no local files are read unless you explicitly import an MJML file first.
+- Use **Import MJML Template** if you want to load a local `.mjml` file into the canvas, then press **Convert** to export its compiled HTML.
 
 ## Development Notes
 - The GrapesJS storage manager is disabled; designs persist only for the active session. Configure `storageManager` in `src/editor/Editor.tsx` to enable persistence.
