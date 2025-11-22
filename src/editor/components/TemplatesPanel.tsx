@@ -272,8 +272,20 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
         body: JSON.stringify({ mjml: mjmlMarkup }),
       });
 
-      const isJson = response.headers.get('content-type')?.includes('application/json');
-      const payload = isJson ? await response.json().catch(() => null) : null;
+      const contentType = response.headers
+        .get('content-type')
+        ?.toLowerCase()
+        .includes('application/json');
+      const rawBody = await response.text();
+      let payload: Record<string, unknown> | null = null;
+
+      if (contentType) {
+        try {
+          payload = JSON.parse(rawBody || '{}');
+        } catch (error) {
+          console.error('Unable to parse MJML conversion response JSON', error, rawBody);
+        }
+      }
 
       if (!response.ok) {
         if (response.status === 400 && payload?.errors) {
@@ -281,11 +293,13 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
           return;
         }
 
+        console.error('MJML conversion failed', response.status, rawBody);
         window.alert('MJML conversion failed. Please try again.');
         return;
       }
 
       if (!payload || typeof payload.html !== 'string') {
+        console.error('Unexpected conversion response', rawBody);
         window.alert('Unexpected response from MJML conversion service.');
         return;
       }

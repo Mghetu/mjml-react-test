@@ -6,6 +6,20 @@ const port = process.env.PORT || 3001;
 
 app.use(express.json({ limit: '1mb' }));
 
+// Lightweight request logging for the MJML endpoint (no payloads persisted).
+app.use('/api/convert-mjml', (req, res, next) => {
+  const startedAt = Date.now();
+
+  res.on('finish', () => {
+    const elapsed = Date.now() - startedAt;
+    console.info(
+      `[MJML] ${req.method} ${req.originalUrl} -> ${res.statusCode} (${elapsed}ms)`,
+    );
+  });
+
+  next();
+});
+
 // Allow preflight requests for JSON POSTs without exposing MJML payloads.
 app.options('/api/convert-mjml', (_req, res) => {
   res.sendStatus(204);
