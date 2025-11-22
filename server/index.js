@@ -6,6 +6,11 @@ const port = process.env.PORT || 3001;
 
 app.use(express.json({ limit: '1mb' }));
 
+// Allow preflight requests for JSON POSTs without exposing MJML payloads.
+app.options('/api/convert-mjml', (_req, res) => {
+  res.sendStatus(204);
+});
+
 app.post('/api/convert-mjml', (req, res) => {
   const { mjml } = req.body ?? {};
 
