@@ -38,6 +38,15 @@ Additional architectural details and extension ideas are documented in [`docs/CO
    ```
 4. Open the provided localhost URL in your browser to interact with the editor. Requests to `/api/convert-mjml` are proxied to the local MJML server running on port 3001 during development.
 
+### Single-process preview with API
+If you want to exercise the built app and the API on the same origin (avoids 405s from static hosts that do not forward `/api`), run:
+
+```bash
+npm run serve
+```
+
+This builds the frontend into `dist/` and serves both the static assets and the MJML API from the same Express server on port 3001.
+
 ## MJML Conversion API
 - **Endpoint:** `POST /api/convert-mjml`
 - **Request body:** `{ "mjml": "<mjml markup>" }`
