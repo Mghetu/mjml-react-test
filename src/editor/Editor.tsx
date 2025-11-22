@@ -89,6 +89,17 @@ export default function Editor() {
         .join('\n');
     };
 
+    const buildConversionError = (status: number, statusText: string, rawBody: string) => {
+      const statusLabel = statusText ? `${status} ${statusText}` : `${status}`;
+      const body = rawBody?.trim();
+
+      if (!body) {
+        return `MJML conversion failed (${statusLabel}).`;
+      }
+
+      return `MJML conversion failed (${statusLabel}):\n${body}`;
+    };
+
     const addTemplateActions = () => {
       const panelId = 'templates';
       const { Panels } = editor;
@@ -137,8 +148,14 @@ export default function Editor() {
                 return;
               }
 
+              const failureMessage = buildConversionError(
+                response.status,
+                response.statusText,
+                rawBody,
+              );
+
               console.error('MJML conversion failed', response.status, rawBody);
-              alert('MJML conversion failed. Please try again.');
+              alert(failureMessage);
               return;
             }
 
@@ -151,7 +168,7 @@ export default function Editor() {
             downloadFile(payload.html, 'template.html', 'text/html');
           } catch (error) {
             console.error('MJML conversion request failed', error);
-            alert('Unable to reach the MJML conversion service.');
+            alert(`Unable to reach the MJML conversion service: ${String(error)}`);
           }
         },
       });

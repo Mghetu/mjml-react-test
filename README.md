@@ -38,6 +38,15 @@ Additional architectural details and extension ideas are documented in [`docs/CO
    ```
 4. Open the provided localhost URL in your browser to interact with the editor. Requests to `/api/convert-mjml` are proxied to the local MJML server running on port 3001 during development.
 
+### Verifying the conversion API locally
+Run the reproducibility script to confirm the backend responds with HTML:
+
+```bash
+node tests/convert-mjml.test.js
+```
+
+You should see `Status: 200` and a JSON body containing `html`. A 405 or an HTML error page usually means the request hit a static host instead of the Express server—start `npm run server` (or `npm run preview` after a build) to ensure the API is available on port 3001.
+
 ### Single-process preview with API
 If you want to exercise the built app and the API on the same origin (avoids 405s from static hosts that do not forward `/api`), run:
 

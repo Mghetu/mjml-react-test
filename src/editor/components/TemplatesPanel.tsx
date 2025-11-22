@@ -78,6 +78,17 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
       .join('\n');
   }, []);
 
+  const buildConversionError = useCallback((status: number, statusText: string, rawBody: string) => {
+    const statusLabel = statusText ? `${status} ${statusText}` : `${status}`;
+    const body = rawBody?.trim();
+
+    if (!body) {
+      return `MJML conversion failed (${statusLabel}).`;
+    }
+
+    return `MJML conversion failed (${statusLabel}):\n${body}`;
+  }, []);
+
   const updateRecents = useCallback((name: string, kind: RecentKind) => {
     const timestamp = Date.now();
     setRecentItems((prev) => {
@@ -293,8 +304,14 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
           return;
         }
 
+        const failureMessage = buildConversionError(
+          response.status,
+          response.statusText,
+          rawBody,
+        );
+
         console.error('MJML conversion failed', response.status, rawBody);
-        window.alert('MJML conversion failed. Please try again.');
+        window.alert(failureMessage);
         return;
       }
 
@@ -307,11 +324,11 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
       downloadFile(payload.html, 'template.html', 'text/html');
     } catch (error) {
       console.error('MJML conversion request failed', error);
-      window.alert('Unable to reach the MJML conversion service.');
+      window.alert(`Unable to reach the MJML conversion service: ${String(error)}`);
     } finally {
       setIsConverting(false);
     }
-  }, [downloadFile, editor, formatMjmlErrors]);
+  }, [buildConversionError, downloadFile, editor, formatMjmlErrors]);
 
   return (
     <div
