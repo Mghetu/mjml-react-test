@@ -42,10 +42,10 @@ Additional architectural details and extension ideas are documented in [`docs/CO
 If you want to exercise the built app and the API on the same origin (avoids 405s from static hosts that do not forward `/api`), run:
 
 ```bash
-npm run serve
+npm run preview
 ```
 
-This builds the frontend into `dist/` and serves both the static assets and the MJML API from the same Express server on port 3001.
+`npm run preview` builds the frontend into `dist/` and serves both the static assets and the MJML API from the same Express server on port 3001.
 
 ## MJML Conversion API
 - **Endpoint:** `POST /api/convert-mjml`
