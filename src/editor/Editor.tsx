@@ -159,7 +159,27 @@ export default function Editor() {
       });
     };
 
-    (window as unknown as { editor?: GrapesEditor }).editor = editor;
+    const globalWindow = window as typeof window & {
+      editor?: GrapesEditor;
+      debugConvert?: () => Promise<void>;
+    };
+
+    globalWindow.editor = editor;
+    globalWindow.debugConvert = async () => {
+      try {
+        const response = await fetch('/api/convert-mjml', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mjml: '<mjml><mj-body></mj-body></mjml>' }),
+        });
+
+        const payload = await response.text();
+        console.log('DEBUG /api/convert-mjml →', response.status, payload);
+      } catch (error) {
+        console.error('DEBUG /api/convert-mjml failed', error);
+      }
+    };
+
     console.log('Editor loaded with React UI');
 
     addTemplateActions();
