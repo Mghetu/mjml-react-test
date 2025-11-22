@@ -334,6 +334,66 @@ export default function Editor() {
       }
     });
 
+    const dc = editor.DomComponents;
+
+    const mjTextType = dc.getType('mj-text');
+    if (mjTextType) {
+      const { model: MjTextModel, view: MjTextView } = mjTextType;
+
+      dc.addType('mj-text', {
+        model: MjTextModel,
+        view: MjTextView.extend({
+          events: {
+            ...(MjTextView.prototype.events || {}),
+            dblclick: 'onDoubleClick',
+          },
+
+          onDoubleClick(ev: MouseEvent) {
+            ev.preventDefault();
+            ev.stopPropagation();
+
+            const em = (this as unknown as { em?: { get?: (key: string) => unknown } }).em;
+            const editorInst = em?.get && (em.get('Editor') as GrapesEditor | undefined);
+            if (!editorInst) return;
+
+            const comp = (this as unknown as { model?: UnknownComponent }).model;
+            if (!comp) return;
+
+            editorInst.runCommand('open-tiptap-modal', { component: comp });
+          },
+        }),
+      });
+    }
+
+    const textType = dc.getType('text');
+    if (textType) {
+      const { model: TextModel, view: TextView } = textType;
+
+      dc.addType('text', {
+        model: TextModel,
+        view: TextView.extend({
+          events: {
+            ...(TextView.prototype.events || {}),
+            dblclick: 'onDoubleClick',
+          },
+
+          onDoubleClick(ev: MouseEvent) {
+            ev.preventDefault();
+            ev.stopPropagation();
+
+            const em = (this as unknown as { em?: { get?: (key: string) => unknown } }).em;
+            const editorInst = em?.get && (em.get('Editor') as GrapesEditor | undefined);
+            if (!editorInst) return;
+
+            const comp = (this as unknown as { model?: UnknownComponent }).model;
+            if (!comp) return;
+
+            editorInst.runCommand('open-tiptap-modal', { component: comp });
+          },
+        }),
+      });
+    }
+
     const removeIfEmptyDiv = (candidate?: UnknownComponent | null) => {
       if (!candidate) {
         return;

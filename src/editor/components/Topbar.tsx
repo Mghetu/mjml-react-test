@@ -1,6 +1,7 @@
 // src/editor/components/Topbar.tsx
 import { useEffect, useState } from 'react';
 import { useEditor } from '@grapesjs/react';
+import TopbarEditTextButton from './TopbarEditTextButton';
 
 export default function Topbar() {
   const editor = useEditor();
@@ -108,6 +109,7 @@ export default function Topbar() {
           >
             🔳
           </button>
+          <TopbarEditTextButton />
           {actions.map((action) => (
             <button
               key={action.command}
