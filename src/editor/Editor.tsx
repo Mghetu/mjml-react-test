@@ -3,6 +3,8 @@ import { useCallback, useEffect, useRef } from 'react';
 import grapesjs, { type Component as GjsComponent, type Editor as GrapesEditor } from 'grapesjs';
 import GjsEditor, { Canvas, WithEditor } from '@grapesjs/react';
 import mjmlPlugin from 'grapesjs-mjml';
+import rteExtensions from 'grapesjs-rte-extensions';
+import './grapesjs-rte-extensions.min.css';
 
 import Topbar from './components/Topbar';
 import LeftSidebar from './components/LeftSidebar';
@@ -691,7 +693,25 @@ const initialTemplate = [
       options={{
         height: '100vh',
         storageManager: false,
-        plugins: [mjmlPlugin],
+        plugins: [
+          mjmlPlugin,
+          (editor) =>
+            rteExtensions(editor, {
+              list: true,
+              format: {
+                heading1: true,
+                heading2: true,
+                heading3: true,
+                heading4: true,
+                heading5: true,
+                paragraph: true,
+                quote: true,
+                clearFormatting: true,
+              },
+              align: true,
+              indentOutdent: true,
+            }),
+        ],
       }}
       onEditor={handleEditorReady}
     >
