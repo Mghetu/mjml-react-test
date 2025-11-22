@@ -22,6 +22,7 @@ export function registerAnchorPlugin(editor: Editor) {
     model: RawModel.extend({
       defaults: {
         ...baseDefaults,
+        tagName: 'mj-raw',
         type: 'mj-anchor',
         'custom-name': 'Anchor Target',
         draggable: '[data-gjs-type="mj-column"], [data-gjs-type="mj-text"]',
@@ -63,12 +64,12 @@ export function registerAnchorPlugin(editor: Editor) {
         this.set('content', `<a name="${safeId}" id="${safeId}"></a>`);
       },
 
-      getAttrToHTML(this: Component, ...args: unknown[]) {
-        const attrs =
-          RawModel.prototype.getAttrToHTML?.apply(this, args) ||
-          { ...((this.get('attributes') as Record<string, unknown> | undefined) || {}) };
+      getAttrToHTML(this: Component) {
+        const attrs = {
+          ...((this.get('attributes') as Record<string, unknown> | undefined) || {}),
+        };
 
-        delete (attrs as Record<string, unknown>).anchorId;
+        delete attrs.anchorId;
 
         return attrs;
       },
