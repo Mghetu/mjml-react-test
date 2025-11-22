@@ -30,64 +30,6 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   const mjmlInputRef = useRef<HTMLInputElement | null>(null);
   const sessionInputRef = useRef<HTMLInputElement | null>(null);
   const [recentItems, setRecentItems] = useState<RecentItem[]>([]);
-  const [isConverting, setIsConverting] = useState(false);
-
-  const downloadFile = useCallback((content: string, filename: string, mimeType: string) => {
-    const blob = new Blob([content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.append(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => {
-      URL.revokeObjectURL(url);
-    }, 0);
-  }, []);
-
-  const formatMjmlErrors = useCallback((errors: unknown) => {
-    if (!Array.isArray(errors)) {
-      return 'MJML validation failed.';
-    }
-
-    return errors
-      .map((error) => {
-        if (typeof error === 'string') {
-          return error;
-        }
-
-        if (error && typeof error === 'object') {
-          const { message, line, tagName } = error as { [key: string]: unknown };
-          const pieces = [message, line ? `Line: ${line}` : null, tagName ? `Tag: ${tagName}` : null]
-            .filter(Boolean)
-            .join(' - ');
-
-          if (pieces.length > 0) {
-            return pieces;
-          }
-        }
-
-        try {
-          return JSON.stringify(error);
-        } catch (serializationError) {
-          console.error('Unable to serialize MJML error', serializationError);
-          return 'Unknown MJML validation error.';
-        }
-      })
-      .join('\n');
-  }, []);
-
-  const buildConversionError = useCallback((status: number, statusText: string, rawBody: string) => {
-    const statusLabel = statusText ? `${status} ${statusText}` : `${status}`;
-    const body = rawBody?.trim();
-
-    if (!body) {
-      return `MJML conversion failed (${statusLabel}).`;
-    }
-
-    return `MJML conversion failed (${statusLabel}):\n${body}`;
-  }, []);
 
   const updateRecents = useCallback((name: string, kind: RecentKind) => {
     const timestamp = Date.now();
@@ -257,79 +199,6 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     }
   }, [editor]);
 
-  const handleExportMjml = useCallback(() => {
-    if (!editor) {
-      window.alert('Editor is not ready yet.');
-      return;
-    }
-
-    const mjmlMarkup = editor.getHtml();
-    downloadFile(mjmlMarkup, 'template.mjml', 'application/vnd.mjml+xml');
-  }, [downloadFile, editor]);
-
-  const handleConvertMjmlToHtml = useCallback(async () => {
-    if (!editor) {
-      window.alert('Editor is not ready yet.');
-      return;
-    }
-
-    const mjmlMarkup = editor.getHtml();
-    setIsConverting(true);
-
-    try {
-      const response = await fetch('/api/convert-mjml', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mjml: mjmlMarkup }),
-      });
-
-      const contentType = response.headers
-        .get('content-type')
-        ?.toLowerCase()
-        .includes('application/json');
-      const rawBody = await response.text();
-      let payload: Record<string, unknown> | null = null;
-
-      if (contentType) {
-        try {
-          payload = JSON.parse(rawBody || '{}');
-        } catch (error) {
-          console.error('Unable to parse MJML conversion response JSON', error, rawBody);
-        }
-      }
-
-      if (!response.ok) {
-        if (response.status === 400 && payload?.errors) {
-          window.alert(formatMjmlErrors(payload.errors));
-          return;
-        }
-
-        const failureMessage = buildConversionError(
-          response.status,
-          response.statusText,
-          rawBody,
-        );
-
-        console.error('MJML conversion failed', response.status, rawBody);
-        window.alert(failureMessage);
-        return;
-      }
-
-      if (!payload || typeof payload.html !== 'string') {
-        console.error('Unexpected conversion response', rawBody);
-        window.alert('Unexpected response from MJML conversion service.');
-        return;
-      }
-
-      downloadFile(payload.html, 'template.html', 'text/html');
-    } catch (error) {
-      console.error('MJML conversion request failed', error);
-      window.alert(`Unable to reach the MJML conversion service: ${String(error)}`);
-    } finally {
-      setIsConverting(false);
-    }
-  }, [buildConversionError, downloadFile, editor, formatMjmlErrors]);
-
   return (
     <div
       className="templates-panel gjs-one-bg gjs-two-color"
@@ -362,24 +231,6 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
           title="Download the current editor session as JSON"
         >
           Export Session (JSON)
-        </button>
-        <button
-          type="button"
-          className="templates-action-button gjs-btn"
-          onClick={handleExportMjml}
-          disabled={!editor}
-          title="Download the current MJML markup"
-        >
-          Export MJML
-        </button>
-        <button
-          type="button"
-          className="templates-action-button gjs-btn"
-          onClick={handleConvertMjmlToHtml}
-          disabled={!editor || isConverting}
-          title="Convert current MJML to HTML via backend"
-        >
-          {isConverting ? 'Converting…' : 'Convert MJML to HTML'}
         </button>
       </div>
 
