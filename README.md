@@ -28,11 +28,23 @@ Additional architectural details and extension ideas are documented in [`docs/CO
    ```bash
    npm install
    ```
-2. Start the development server:
+2. Start the MJML conversion API (separate terminal):
+   ```bash
+   npm run server
+   ```
+3. Start the Vite development server:
    ```bash
    npm run dev
    ```
-3. Open the provided localhost URL in your browser to interact with the editor.
+4. Open the provided localhost URL in your browser to interact with the editor. Requests to `/api/convert-mjml` are proxied to the local MJML server running on port 3001 during development.
+
+## MJML Conversion API
+- **Endpoint:** `POST /api/convert-mjml`
+- **Request body:** `{ "mjml": "<mjml markup>" }`
+- **Success response:** `{ "html": "<compiled html>" }`
+- **Validation errors:** Responds with HTTP 400 and `{ "errors": [...] }`.
+
+The server processes MJML in-memory only and does not persist email content.
 
 ## Development Notes
 - The GrapesJS storage manager is disabled; designs persist only for the active session. Configure `storageManager` in `src/editor/Editor.tsx` to enable persistence.
