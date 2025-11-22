@@ -190,18 +190,34 @@ export default function Editor() {
       );
     };
 
+    const toModel = (component: unknown): UnknownComponent | null => {
+      if (!component) {
+        return null;
+      }
+
+      const candidate = component as { model?: UnknownComponent } | UnknownComponent;
+      const maybeModel = (candidate as { model?: UnknownComponent }).model;
+
+      if (maybeModel) {
+        return maybeModel;
+      }
+
+      return candidate as UnknownComponent;
+    };
+
     const isTextLikeComponent = (component: unknown) => {
-      const candidate = component as UnknownComponent | null | undefined;
-      const type = getComponentType(candidate);
-      const tagName = (candidate?.get?.('tagName') as string | undefined)?.toLowerCase();
+      const model = toModel(component);
+      const type = getComponentType(model);
+      const tagName = (model?.get?.('tagName') as string | undefined)?.toLowerCase();
       return type === 'text' || type === 'mj-text' || type === 'textnode' || tagName === 'mj-text';
     };
 
     editor.on('rte:enable', (view: unknown, rte?: unknown) => {
-      const component =
+      const component = toModel(
         (view as { model?: UnknownComponent })?.model ??
-        (view as { component?: UnknownComponent })?.component ??
-        editor.getSelected?.();
+          (view as { component?: UnknownComponent })?.component ??
+          editor.getSelected?.(),
+      );
 
       const rteInstance = (view as { rte?: { disable?: () => void } })?.rte ??
         (rte as { disable?: () => void } | undefined);
@@ -245,7 +261,7 @@ export default function Editor() {
 
     editor.Commands.add('open-tiptap-modal', {
       run(ed, _sender, opts: { component?: UnknownComponent } = {}) {
-        const comp = opts.component ?? (ed.getSelected?.() as UnknownComponent | null);
+        const comp = toModel(opts.component) ?? toModel(ed.getSelected?.());
 
         if (!comp || !isTextLikeComponent(comp)) {
           return;
@@ -311,7 +327,8 @@ export default function Editor() {
     });
 
     editor.on('component:dblclick', (component) => {
-      const candidate = component as UnknownComponent;
+      const candidate = toModel(component);
+
       if (isTextLikeComponent(candidate)) {
         editor.runCommand('open-tiptap-modal', { component: candidate });
       }
