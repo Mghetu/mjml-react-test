@@ -2,31 +2,30 @@ import type { Component, Editor } from 'grapesjs';
 
 export function registerMjImageAnchorFix(editor: Editor) {
   const domc = editor.DomComponents;
-  const imageType = domc.getType('mj-image');
-  if (!imageType) {
-    return;
-  }
+  const imgType = domc.getType('mj-image');
+  const BaseModel = imgType?.model;
 
-  const ImageModel = imageType.model;
+  if (!BaseModel) return;
 
   domc.addType('mj-image', {
     extend: 'mj-image',
-    model: ImageModel.extend({
-      getAttrToHTML(this: Component, ...args: unknown[]) {
-        const attrs = ImageModel.prototype.getAttrToHTML
-          ? ImageModel.prototype.getAttrToHTML.apply(this, args)
-          : this.get('attributes');
+    model: {
+      // Override only attribute generation (no Model.extend!)
+      getAttrToHTML(this: Component, ...args: any[]) {
+        const baseAttrs = BaseModel.prototype.getAttrToHTML
+          ? BaseModel.prototype.getAttrToHTML.apply(this, args) || {}
+          : { ...(this.get('attributes') || {}) };
 
-        const href =
-          (attrs as Record<string, unknown> | undefined)?.href ??
-          this.get('attributes')?.href;
+        const attrs = baseAttrs as Record<string, unknown>;
+        const href = attrs.href as string | undefined;
 
-        if (typeof href === 'string' && href.startsWith('#') && attrs && typeof attrs === 'object') {
-          delete (attrs as Record<string, unknown>).target;
+        // For internal anchors (#L1), remove target="_blank"
+        if (href && href.startsWith('#')) {
+          delete attrs.target;
         }
 
         return attrs;
       },
-    }),
+    },
   });
 }

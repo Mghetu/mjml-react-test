@@ -17,9 +17,11 @@ export function registerAnchorPlugin(editor: Editor) {
       ? RawModel.prototype.defaults()
       : RawModel.prototype.defaults) || {};
 
+  const baseGetAttrToHTML = RawModel.prototype.getAttrToHTML;
+
   domc.addType('mj-anchor', {
     extend: 'mj-raw',
-    model: RawModel.extend({
+    model: {
       defaults: {
         ...baseDefaults,
         tagName: 'mj-raw',
@@ -30,7 +32,7 @@ export function registerAnchorPlugin(editor: Editor) {
         selectable: true,
         highlightable: true,
         attributes: {},
-        anchorId: 'L1',
+        anchorId: 'section-1',
         traits: [
           {
             type: 'text',
@@ -64,16 +66,18 @@ export function registerAnchorPlugin(editor: Editor) {
         this.set('content', `<a name="${safeId}" id="${safeId}"></a>`);
       },
 
-      getAttrToHTML(this: Component) {
-        const attrs = {
-          ...((this.get('attributes') as Record<string, unknown> | undefined) || {}),
-        };
+      getAttrToHTML(this: Component, ...args: unknown[]) {
+        const attrs = baseGetAttrToHTML
+          ? baseGetAttrToHTML.apply(this, args)
+          : { ...(this.get('attributes') as Record<string, unknown>) };
 
-        delete attrs.anchorId;
+        if (attrs && typeof attrs === 'object') {
+          delete (attrs as Record<string, unknown>).anchorId;
+        }
 
         return attrs;
       },
-    }),
+    },
     view:
       RawView?.extend?.({
         onRender(this: ComponentView) {
@@ -96,7 +100,7 @@ export function registerAnchorPlugin(editor: Editor) {
     attributes: { title: 'Internal anchor target' },
     content: {
       type: 'mj-anchor',
-      anchorId: 'L1',
+      anchorId: 'section-1',
     },
   });
 }
