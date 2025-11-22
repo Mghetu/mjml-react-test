@@ -46,6 +46,10 @@ Additional architectural details and extension ideas are documented in [`docs/CO
 
 The server processes MJML in-memory only and does not persist email content.
 
+### What the Convert button sends
+- The **Convert MJML to HTML** button in the Templates panel sends the MJML currently on the canvas (via `editor.getHtml()`); no local files are read unless you explicitly import an MJML file first.
+- Use **Import MJML Template** if you want to load a local `.mjml` file into the canvas, then press **Convert** to export its compiled HTML.
+
 ## Development Notes
 - The GrapesJS storage manager is disabled; designs persist only for the active session. Configure `storageManager` in `src/editor/Editor.tsx` to enable persistence.
 - Blocks, traits, and styles are rendered via providers from `@grapesjs/react`. Customize these components to extend the editor experience.
