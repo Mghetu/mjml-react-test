@@ -36,7 +36,7 @@ Additional architectural details and extension ideas are documented in [`docs/CO
    ```bash
    npm run dev
    ```
-4. Open the provided localhost URL in your browser to interact with the editor. Requests to `/api/convert-mjml` are proxied to the local MJML server during development.
+4. Open the provided localhost URL in your browser to interact with the editor. Requests to `/api/convert-mjml` are proxied to the local MJML server running on port 3001 during development.
 
 ## MJML Conversion API
 - **Endpoint:** `POST /api/convert-mjml`

@@ -2,7 +2,7 @@ import express from 'express';
 import mjml2html from 'mjml';
 
 const app = express();
-const port = process.env.PORT || 4000;
+const port = process.env.PORT || 3001;
 
 app.use(express.json({ limit: '1mb' }));
 
@@ -27,6 +27,10 @@ app.post('/api/convert-mjml', (req, res) => {
   }
 
   res.json({ html: result.html });
+});
+
+app.all('/api/convert-mjml', (_req, res) => {
+  res.status(405).json({ error: 'Method Not Allowed' });
 });
 
 app.use((error, _req, res, _next) => {

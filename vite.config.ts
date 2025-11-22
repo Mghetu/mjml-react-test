@@ -8,7 +8,10 @@ export default defineConfig({
   build: { outDir: 'dist', target: 'esnext' },
   server: {
     proxy: {
-      '/api': 'http://localhost:4000',
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
     },
   },
 });
