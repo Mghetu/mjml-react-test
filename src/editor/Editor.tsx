@@ -3,10 +3,12 @@ import { useCallback, useEffect, useRef } from 'react';
 import grapesjs, { type Component as GjsComponent, type Editor as GrapesEditor } from 'grapesjs';
 import GjsEditor, { Canvas, WithEditor } from '@grapesjs/react';
 import mjmlPlugin from 'grapesjs-mjml';
+import ReactDOM from 'react-dom/client';
 
 import Topbar from './components/Topbar';
 import LeftSidebar from './components/LeftSidebar';
 import RightSidebar from './components/RightSidebar';
+import TiptapModalEditor from './components/TiptapModalEditor';
 import { sanitizeMjmlMarkup } from './utils/mjml';
 import { deepSanitize, sanitizeComponentAttributes, sanitizeComponentStyles } from './sanitizeAttributes';
 import registerPrebuiltBlocks from './plugins/registerPrebuiltBlocks';
@@ -18,6 +20,71 @@ import { fixMjWrapper } from './patches/fixMjWrapper';
 
 import 'grapesjs/dist/css/grapes.min.css';
 import './editor.css';
+
+const allowedTiptapTags = new Set([
+  'p',
+  'strong',
+  'em',
+  'a',
+  'ul',
+  'ol',
+  'li',
+  'br',
+  'span',
+]);
+
+const allowedTiptapAttributes = new Set(['href', 'target', 'rel', 'style']);
+
+const sanitizeTiptapHtml = (rawHtml: string) => {
+  const html = rawHtml || '';
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+
+  const sanitizeNode = (node: Node) => {
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      const el = node as HTMLElement;
+      const tagName = el.tagName.toLowerCase();
+
+      if (tagName === 'body') {
+        Array.from(el.childNodes).forEach(sanitizeNode);
+        return;
+      }
+
+      Array.from(el.childNodes).forEach(sanitizeNode);
+
+      if (!allowedTiptapTags.has(tagName)) {
+        const parent = el.parentNode;
+        if (parent) {
+          while (el.firstChild) {
+            parent.insertBefore(el.firstChild, el);
+          }
+          parent.removeChild(el);
+        }
+        return;
+      }
+
+      Array.from(el.attributes).forEach((attr) => {
+        const attrName = attr.name.toLowerCase();
+
+        if (!allowedTiptapAttributes.has(attrName)) {
+          el.removeAttribute(attr.name);
+          return;
+        }
+
+        if (attrName === 'href' && !/^https?:\/\//i.test(attr.value)) {
+          el.removeAttribute(attr.name);
+        }
+      });
+    } else {
+      Array.from(node.childNodes).forEach(sanitizeNode);
+    }
+  };
+
+  sanitizeNode(doc.body);
+
+  const cleanedHtml = doc.body.innerHTML.trim();
+  return cleanedHtml.length > 0 ? cleanedHtml : '<p></p>';
+};
 
 export default function Editor() {
   const editorRef = useRef<GrapesEditor | null>(null);
@@ -113,10 +180,55 @@ export default function Editor() {
     let isRestoringMjBody = false;
     let isRoutingComponentIntoBody = false;
 
-    const getComponentType = (component: UnknownComponent | null | undefined) =>
-      ((component?.get?.('type') as string | undefined) ??
-        (component?.get?.('tagName') as string | undefined) ??
-        '').toLowerCase();
+    const getComponentType = (component: unknown) => {
+      const candidate = component as UnknownComponent | null | undefined;
+      return (
+        ((candidate?.get?.('type') as string | undefined) ??
+          (candidate?.get?.('tagName') as string | undefined) ??
+          '')
+          .toLowerCase()
+      );
+    };
+
+    const toModel = (component: unknown): UnknownComponent | null => {
+      if (!component) {
+        return null;
+      }
+
+      const candidate = component as { model?: UnknownComponent } | UnknownComponent;
+      const maybeModel = (candidate as { model?: UnknownComponent }).model;
+
+      if (maybeModel) {
+        return maybeModel;
+      }
+
+      return candidate as UnknownComponent;
+    };
+
+    const isTextLikeComponent = (component: unknown) => {
+      const model = toModel(component);
+      const type = getComponentType(model);
+      const tagName = (model?.get?.('tagName') as string | undefined)?.toLowerCase();
+      return type === 'text' || type === 'mj-text' || type === 'textnode' || tagName === 'mj-text';
+    };
+
+    editor.on('rte:enable', (view: unknown, rte?: unknown) => {
+      const component = toModel(
+        (view as { model?: UnknownComponent })?.model ??
+          (view as { component?: UnknownComponent })?.component ??
+          editor.getSelected?.(),
+      );
+
+      const rteInstance = (view as { rte?: { disable?: () => void } })?.rte ??
+        (rte as { disable?: () => void } | undefined);
+
+      if (isTextLikeComponent(component)) {
+        rteInstance?.disable?.();
+        return false;
+      }
+
+      return undefined;
+    });
 
     const toComponentArray = (collection: unknown): UnknownComponent[] => {
       if (!collection) {
@@ -146,6 +258,81 @@ export default function Editor() {
 
       return [];
     };
+
+    editor.Commands.add('open-tiptap-modal', {
+      run(ed, _sender, opts: { component?: UnknownComponent } = {}) {
+        const comp = toModel(opts.component) ?? toModel(ed.getSelected?.());
+
+        if (!comp || !isTextLikeComponent(comp)) {
+          return;
+        }
+
+        const canUpdate =
+          typeof (comp as { components?: unknown }).components === 'function' ||
+          typeof (comp as { set?: unknown }).set === 'function';
+
+        if (!canUpdate) {
+          return;
+        }
+
+        const modal = ed.Modal;
+        const pfx = ed.getConfig().stylePrefix || 'gjs-';
+        const wrapper = document.createElement('div');
+        wrapper.className = `${pfx}mdl-tiptap-wrapper`;
+        wrapper.style.padding = '12px';
+
+        modal.open({
+          title: 'Edit text',
+          content: wrapper,
+        });
+
+        const initialHtml =
+          (comp as { getInnerHTML?: () => string }).getInnerHTML?.() ??
+          (comp as { toHTML?: (opts?: unknown) => string }).toHTML?.() ??
+          ((comp as { get?: (prop: string) => unknown }).get?.('content') as string | undefined) ??
+          '';
+
+        const root = ReactDOM.createRoot(wrapper);
+
+        const closeModal = () => {
+          modal.close();
+        };
+
+        const handleSave = (html: string) => {
+          const cleanHtml = sanitizeTiptapHtml(html);
+
+          if (typeof (comp as { components?: (content: string) => void }).components === 'function') {
+            (comp as { components: (content: string) => void }).components(cleanHtml);
+          } else if (typeof (comp as { set?: (props: Record<string, unknown>) => void }).set === 'function') {
+            (comp as { set: (props: Record<string, unknown>) => void }).set({ content: cleanHtml });
+          }
+
+          closeModal();
+        };
+
+        root.render(
+          <TiptapModalEditor initialHtml={initialHtml} onSave={handleSave} onCancel={closeModal} />,
+        );
+
+        const modalModel = modal.getModel?.();
+        const handleModalToggle = (model: { get?: (prop: string) => unknown }) => {
+          if (model?.get?.('open') === false) {
+            modalModel?.off?.('change:open', handleModalToggle);
+            root.unmount();
+          }
+        };
+
+        modalModel?.on?.('change:open', handleModalToggle);
+      },
+    });
+
+    editor.on('component:dblclick', (component) => {
+      const candidate = toModel(component);
+
+      if (isTextLikeComponent(candidate)) {
+        editor.runCommand('open-tiptap-modal', { component: candidate });
+      }
+    });
 
     const removeIfEmptyDiv = (candidate?: UnknownComponent | null) => {
       if (!candidate) {
