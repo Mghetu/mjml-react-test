@@ -34,6 +34,20 @@ Additional architectural details and extension ideas are documented in [`docs/CO
    ```
 3. Open the provided localhost URL in your browser to interact with the editor.
 
+## Editing text with the TipTap modal
+
+The inline GrapesJS RTE is disabled for `mj-text` and `text` components. Use the TipTap modal instead:
+
+1. **Open the modal**
+   - Double-click an `mj-text` (or plain text) block in the canvas, **or**
+   - Use the command palette/toolbar action if wired to `open-tiptap-modal`.
+2. **Edit content**
+   - Format with bold, italic, bullet list, and links.
+   - Keyboard shortcuts like **Ctrl/Cmd+B** and **Ctrl/Cmd+I** work.
+3. **Save or cancel**
+   - Click **Save** to write the edited HTML back to the selected component.
+   - Click **Cancel** (or close the modal) to discard changes.
+
 ## Development Notes
 - The GrapesJS storage manager is disabled; designs persist only for the active session. Configure `storageManager` in `src/editor/Editor.tsx` to enable persistence.
 - Blocks, traits, and styles are rendered via providers from `@grapesjs/react`. Customize these components to extend the editor experience.
