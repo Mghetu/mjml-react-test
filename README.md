@@ -48,6 +48,15 @@ The inline GrapesJS RTE is disabled for `mj-text` and `text` components. Use the
    - Click **Save** to write the edited HTML back to the selected component.
    - Click **Cancel** (or close the modal) to discard changes.
 
+### Troubleshooting the TipTap modal
+
+- If the dev server overlays an error like `Failed to resolve import "@tiptap/react"`, run `npm install` to ensure the TipTap packages from `package.json` are present locally.
+- When in doubt, you can also open the modal programmatically from the browser console with:
+  ```js
+  const comp = window.editor?.getSelected?.();
+  window.editor?.runCommand('open-tiptap-modal', { component: comp });
+  ```
+
 ## Development Notes
 - The GrapesJS storage manager is disabled; designs persist only for the active session. Configure `storageManager` in `src/editor/Editor.tsx` to enable persistence.
 - Blocks, traits, and styles are rendered via providers from `@grapesjs/react`. Customize these components to extend the editor experience.
