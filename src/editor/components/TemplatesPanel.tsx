@@ -4,6 +4,7 @@ import type { ChangeEvent } from 'react';
 import { useEditorMaybe } from '@grapesjs/react';
 import type { Editor, Page } from 'grapesjs';
 import { sanitizeMjmlMarkup } from '../utils/mjml';
+import { convertCurrentMjmlToHtml } from '../utils/mjmlConversion';
 
 const MAX_TEMPLATE_SIZE = 5 * 1024 * 1024; // 5MB
 
@@ -30,6 +31,21 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   const mjmlInputRef = useRef<HTMLInputElement | null>(null);
   const sessionInputRef = useRef<HTMLInputElement | null>(null);
   const [recentItems, setRecentItems] = useState<RecentItem[]>([]);
+  const [isConverting, setIsConverting] = useState(false);
+
+  const downloadFile = useCallback((content: string, filename: string, mimeType: string) => {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 0);
+  }, []);
 
   const updateRecents = useCallback((name: string, kind: RecentKind) => {
     const timestamp = Date.now();
@@ -182,20 +198,35 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     try {
       const data = editor.getProjectData();
       const serialized = JSON.stringify(data, null, 2);
-      const blob = new Blob([serialized], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'project.json';
-      document.body.append(link);
-      link.click();
-      link.remove();
-      window.setTimeout(() => {
-        URL.revokeObjectURL(url);
-      }, 0);
+      downloadFile(serialized, 'project.json', 'application/json');
     } catch (error) {
       console.error(error);
       window.alert('Failed to export the session.');
+    }
+  }, [downloadFile, editor]);
+
+  const handleExportMjml = useCallback(() => {
+    if (!editor) {
+      window.alert('Editor is not ready yet.');
+      return;
+    }
+
+    const mjmlMarkup = editor.getHtml();
+    downloadFile(mjmlMarkup, 'template.mjml', 'application/vnd.mjml+xml');
+  }, [downloadFile, editor]);
+
+  const handleConvertMjmlToHtml = useCallback(() => {
+    if (!editor) {
+      window.alert('Editor is not ready yet.');
+      return;
+    }
+
+    setIsConverting(true);
+
+    try {
+      convertCurrentMjmlToHtml(editor);
+    } finally {
+      setIsConverting(false);
     }
   }, [editor]);
 
@@ -231,6 +262,24 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
           title="Download the current editor session as JSON"
         >
           Export Session (JSON)
+        </button>
+        <button
+          type="button"
+          className="templates-action-button gjs-btn"
+          onClick={handleExportMjml}
+          disabled={!editor}
+          title="Download the current MJML markup"
+        >
+          Export MJML
+        </button>
+        <button
+          type="button"
+          className="templates-action-button gjs-btn"
+          onClick={handleConvertMjmlToHtml}
+          disabled={!editor || isConverting}
+          title="Convert current MJML to HTML in the browser"
+        >
+          {isConverting ? 'Converting…' : 'Convert MJML to HTML'}
         </button>
       </div>
 

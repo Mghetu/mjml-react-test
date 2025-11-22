@@ -38,3 +38,4 @@ Additional architectural details and extension ideas are documented in [`docs/CO
 - The GrapesJS storage manager is disabled; designs persist only for the active session. Configure `storageManager` in `src/editor/Editor.tsx` to enable persistence.
 - Blocks, traits, and styles are rendered via providers from `@grapesjs/react`. Customize these components to extend the editor experience.
 - ESLint and TypeScript settings follow the default Vite template. Update `eslint.config.js` and the `tsconfig` files as needed for your tooling preferences.
+- MJML → HTML conversion in the hosted editor is handled entirely in the browser via `mjml-browser`, so the `/api/convert-mjml` endpoint is not required for GitHub Pages deployments.
