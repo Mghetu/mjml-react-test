@@ -11,10 +11,6 @@
   },
   "dependencies": {
     "@grapesjs/react": "^2.0.0",
-    "@tiptap/core": "^3.11.0",
-    "@tiptap/extension-link": "^3.11.0",
-    "@tiptap/react": "^3.11.0",
-    "@tiptap/starter-kit": "^3.11.0",
     "grapesjs": "^0.22.13",
     "grapesjs-mjml": "^1.0.7",
     "mjml-browser": "^4.16.1",
