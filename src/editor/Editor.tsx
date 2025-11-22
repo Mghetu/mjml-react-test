@@ -10,6 +10,7 @@ import RightSidebar from './components/RightSidebar';
 import { sanitizeMjmlMarkup } from './utils/mjml';
 import { deepSanitize, sanitizeComponentAttributes, sanitizeComponentStyles } from './sanitizeAttributes';
 import registerPrebuiltBlocks from './plugins/registerPrebuiltBlocks';
+import { registerAnchorPlugin } from './anchorPlugin';
 
 // ✅ ADD THIS IMPORT my_IMPORT one line
 import { fixMjWrapper } from './patches/fixMjWrapper';
@@ -35,6 +36,7 @@ export default function Editor() {
 
      // ✅ APPLY THE PATCH ASAP (safe to call multiple times) my_IMPORT one line
     fixMjWrapper(editor);
+    registerAnchorPlugin(editor);
 
     (window as unknown as { editor?: GrapesEditor }).editor = editor;
     console.log('Editor loaded with React UI');
