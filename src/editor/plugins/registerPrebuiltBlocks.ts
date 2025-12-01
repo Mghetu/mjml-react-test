@@ -170,24 +170,24 @@ export default function registerPrebuiltBlocks(editor: Editor) {
 
 
  add(
-    'MEM-end-of-section-2-banners',
-    'MEM · 2-banners',
+    'MEM-press-release-end-with_images',
+    'MEM · 2-links',
     'MEM',
     `
  <mj-section padding-top="10px" padding-bottom="0px" background-color="#ffffff">
         <mj-group>
           <mj-column width="50%" padding-top="0px" padding-bottom="0px">
-            <mj-image src="https://placehold.co/300x80" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+            <mj-image src="https://media.deloitte.com/is/image/deloitte/Deloitte_press_releases_100" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" href="https://bit.ly/47GqwHK">
             </mj-image>
           </mj-column>
           <mj-column width="50%" padding-top="0px" padding-bottom="0px">
-            <mj-image src="https://placehold.co/300x80" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+            <mj-image src="https://media.deloitte.com/is/image/deloitte/R_A_press_releases%20_100" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" href="https://bit.ly/3Ls1xz6">
             </mj-image>
           </mj-column>
         </mj-group>
       </mj-section>`
   );
-
+  
 
 
  add(
@@ -213,6 +213,25 @@ export default function registerPrebuiltBlocks(editor: Editor) {
       </mj-section>`
   );
 
+
+   add(
+    'MEM-opinion-articles-end-with_images',
+    'MEM · 2-links',
+    'MEM',
+    `
+ <mj-section padding-top="10px" padding-bottom="0px" background-color="#ffffff">
+        <mj-group>
+          <mj-column width="50%" padding-top="0px" padding-bottom="0px">
+            <mj-image src="https://media.deloitte.com/is/image/deloitte/Deloitte_opinion_articles_100" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" href="https://bit.ly/4qo5btU">
+            </mj-image>
+          </mj-column>
+          <mj-column width="50%" padding-top="0px" padding-bottom="0px">
+            <mj-image src="https://media.deloitte.com/is/image/deloitte/R_A_opinion_articles_100" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" href="https://bit.ly/3Ls1MKw">
+            </mj-image>
+          </mj-column>
+        </mj-group>
+      </mj-section>`
+  );
   
 
  add(
@@ -241,6 +260,20 @@ export default function registerPrebuiltBlocks(editor: Editor) {
   );
 
 
+
+     add(
+    'MEM-3rd-party-end-with_images',
+    'MEM · 1-links',
+    'MEM',
+    `
+ <mj-section padding-top="10px" padding-bottom="0px" background-color="#ffffff">
+        <mj-column padding-top="0px" padding-bottom="0px">
+          <mj-image src="https://media.deloitte.com/is/image/deloitte/events_by_other_entities_100" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" href="https://bit.ly/4hs7Z5o">
+          </mj-image>
+        </mj-column>
+      </mj-section>`
+  );
+
  add(
     'MEM-Deloitte-Events-item',
     'MEM · Deloitte Events item',
@@ -260,7 +293,18 @@ export default function registerPrebuiltBlocks(editor: Editor) {
       </mj-section>`
   );
   
-
+     add(
+    'MEM-D-events-end-with_images',
+    'MEM · 1-links',
+    'MEM',
+    `
+  <mj-section padding-top="10px" padding-bottom="0px" background-color="#ffffff">
+        <mj-column padding-top="0px" padding-bottom="0px">
+          <mj-image src="https://media.deloitte.com/is/image/deloitte/all_Deloitte_events_100" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" href="https://bit.ly/4hoWLP7">
+          </mj-image>
+        </mj-column>
+      </mj-section>`
+  );
 
  add(
     'MEM-end-of-section-1-banner',
@@ -357,7 +401,7 @@ add(
     'MEM · SEE-banner',
     'MEM',
     `
-  <mj-section padding-top="10px" padding-bottom="0px" background-color="#f5f5f5">
+    <mj-section padding-top="10px" padding-bottom="0px" background-color="#f5f5f5">
         <mj-column padding-top="0px" padding-bottom="0px">
           <mj-image src="https://media.deloitte.com/is/image/deloitte/SEE_Cluster_MEM_101" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
           </mj-image>
@@ -365,12 +409,12 @@ add(
       </mj-section>
       <mj-section padding-top="0px" padding-bottom="0px" background-color="#ffffff">
         <mj-column width="50%" padding-top="0px" padding-bottom="0px">
-          <mj-button padding-right="10px" padding-left="10px" border-radius="0px 0 0 0" background-color="#ffffff" border="0px none black" href="https://bit.ly/482TEIj">
+          <mj-button padding-right="10px" padding-left="10px" border-radius="0px 0 0 0" background-color="#ffffff" border="0px none black" href="https://bit.ly/3JZbG6j" font-size="14px" font-family="Aptos, Calibri, sans-serif">
             <span data-teams="true" style="color:#86bd40;font-weight:700;font-size:18px;text-decoration:underline;align:center;font-family:Aptos, Calibri, sans-serif;">HUN</span>
           </mj-button>
         </mj-column>
         <mj-column width="50%" padding-top="0px" padding-bottom="0px">
-          <mj-button padding-right="10px" padding-left="10px" border-radius="0px 0 0 0" background-color="#ffffff" border="0px none black" href="https://bit.ly/4oDDSdL">
+          <mj-button padding-right="10px" padding-left="10px" border-radius="0px 0 0 0" background-color="#ffffff" border="0px none black" href="https://bit.ly/44eM8sA" font-size="14px" font-family="Aptos, Calibri, sans-serif">
             <span data-teams="true" style="color:#86bd40;font-weight:700;font-size:18px;text-decoration:underline;align:center;font-family:Aptos, Calibri, sans-serif;">SOUTH</span>
           </mj-button>
         </mj-column>
