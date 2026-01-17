@@ -86,11 +86,77 @@ function normalizeSpacingValue(value: unknown): string | null {
   return null;
 }
 
+function parseStyleString(value: string): Record<string, string> {
+  return value
+    .split(';')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .reduce<Record<string, string>>((acc, entry) => {
+      const [rawName, ...rawValueParts] = entry.split(':');
+      const name = rawName?.trim() ?? '';
+      const valuePart = rawValueParts.join(':').trim();
+
+      if (!name || !valuePart) {
+        return acc;
+      }
+
+      acc[name] = valuePart;
+      return acc;
+    }, {});
+}
+
+function normalizeStyleInput(rawStyle: unknown): {
+  styleObject: Record<string, unknown>;
+  needsNormalization: boolean;
+} {
+  if (typeof rawStyle === 'string') {
+    return {
+      styleObject: parseStyleString(rawStyle),
+      needsNormalization: true,
+    };
+  }
+
+  if (Array.isArray(rawStyle)) {
+    const merged: Record<string, unknown> = {};
+
+    rawStyle.forEach((entry) => {
+      if (Array.isArray(entry) && entry.length === 2) {
+        const [key, value] = entry;
+        merged[String(key)] = value;
+        return;
+      }
+
+      if (entry && typeof entry === 'object') {
+        Object.assign(merged, entry as Record<string, unknown>);
+      }
+    });
+
+    return {
+      styleObject: merged,
+      needsNormalization: true,
+    };
+  }
+
+  if (rawStyle instanceof Map) {
+    return {
+      styleObject: toPlainObject(rawStyle),
+      needsNormalization: true,
+    };
+  }
+
+  if (rawStyle && typeof rawStyle === 'object') {
+    return {
+      styleObject: rawStyle as Record<string, unknown>,
+      needsNormalization: false,
+    };
+  }
+
+  return { styleObject: {}, needsNormalization: true };
+}
+
 export function sanitizeComponentStyles(component: Component) {
   const rawStyle = component.getStyle() as unknown;
-  const styleObject = typeof rawStyle === 'string' ? {} : toPlainObject(rawStyle);
-  const needsNormalization =
-    typeof rawStyle === 'string' || Array.isArray(rawStyle) || rawStyle instanceof Map;
+  const { styleObject, needsNormalization } = normalizeStyleInput(rawStyle);
 
   let dirty = false;
   const safeStyle: Record<string, string> = {};
