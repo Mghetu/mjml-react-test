@@ -120,6 +120,9 @@ export default function Editor() {
         (component?.get?.('tagName') as string | undefined) ??
         '').toLowerCase();
 
+    const isMjmlImporting = () =>
+      Boolean((editor as { __isMjmlImporting?: boolean }).__isMjmlImporting);
+
     const toComponentArray = (collection: unknown): UnknownComponent[] => {
       if (!collection) {
         return [];
@@ -229,7 +232,7 @@ export default function Editor() {
     };
 
     const ensureMjBodyPresence = () => {
-      if (isRestoringMjBody || isRoutingComponentIntoBody) {
+      if (isRestoringMjBody || isRoutingComponentIntoBody || isMjmlImporting()) {
         return;
       }
 
@@ -269,7 +272,7 @@ export default function Editor() {
     };
 
     const ensureComponentInMjBody = (component: UnknownComponent) => {
-      if (isRestoringMjBody || isRoutingComponentIntoBody) {
+      if (isRestoringMjBody || isRoutingComponentIntoBody || isMjmlImporting()) {
         return;
       }
 
@@ -581,6 +584,7 @@ const initialTemplate = [
     editor.on('run:core:canvas-clear', () => {
       setTimeout(ensureMjBodyPresence, 0);
     });
+    editor.on('mjml:imported', ensureMjBodyPresence);
     editor.on('component:add', (component) => {
       deepSanitize(component as GjsComponent);
       ensureComponentInMjBody(component as UnknownComponent);

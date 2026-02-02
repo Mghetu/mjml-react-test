@@ -121,13 +121,38 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
             return;
           }
 
-          const wrapper = editor.DomComponents.getWrapper();
-          if (wrapper) {
-            wrapper.set('content', '');
+          const editorState = editor as unknown as {
+            __isMjmlImporting?: boolean;
+            DomComponents: {
+              getWrapper: () =>
+                | {
+                    components?: () => { reset?: (data?: unknown[]) => void } | undefined;
+                    set?: (key: string, value: unknown) => void;
+                  }
+                | undefined;
+            };
+            Css: { clear: () => void };
+            UndoManager?: { stop?: () => void; start?: () => void; clear?: () => void };
+            trigger?: (event: string) => void;
+          };
+
+          editorState.__isMjmlImporting = true;
+          editorState.UndoManager?.stop?.();
+          editorState.UndoManager?.clear?.();
+
+          try {
+            const wrapper = editorState.DomComponents.getWrapper();
+            const wrapperComponents = wrapper?.components?.();
+            wrapperComponents?.reset?.([]);
+            wrapper?.set?.('content', '');
+            editorState.Css.clear();
+            editor.setComponents(sanitizedMarkup);
+            updateRecents(file.name, 'mjml');
+          } finally {
+            editorState.UndoManager?.start?.();
+            editorState.__isMjmlImporting = false;
+            editorState.trigger?.('mjml:imported');
           }
-          editor.Css.clear();
-          editor.setComponents(sanitizedMarkup);
-          updateRecents(file.name, 'mjml');
         } catch (error) {
           console.error(error);
           window.alert('Failed to import the MJML template.');
