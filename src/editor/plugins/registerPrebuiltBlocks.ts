@@ -510,14 +510,14 @@ add(
     'Article-Section 1',
     'MDM-template',
     `
- <mj-section padding-top="10px" padding-bottom="0px" background-color="#ffffff" padding-left="25px" padding-right="25px">
+<mj-section padding-top="10px" padding-bottom="0px" background-color="#ffffff" padding-left="25px" padding-right="25px">
         <mj-column padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" width="100%">
-          <mj-text font-family="Aptos, Calibri, sans-serif" padding-top="5px" padding-bottom="5px" font-size="12px" line-height="18px" color="#97999b" font-weight="700" padding-right="0px" padding-left="0px">Raport
+          <mj-text font-family="Aptos, Calibri, sans-serif" padding-top="5px" padding-bottom="0px" font-size="12px" line-height="18px" color="#97999b" font-weight="700" padding-right="0px" padding-left="0px">Raport
           </mj-text>
           <mj-text font-size="24px" font-family="Aptos, Calibri, sans-serif" font-weight="700" padding-top="0px" padding-bottom="5px" line-height="28px" padding-right="0px" padding-left="0px">2026 financial services 
             <br/>industry outlooks
           </mj-text>
-          <mj-text font-family="Aptos, Calibri, sans-serif" padding-top="0px" padding-bottom="15px" font-size="15px" line-height="18px" padding-right="0px" padding-left="0px">A guide to help you navigate what’s next and lead the industry forward in a time of extraordinary technological disruption, shifting customer expectations, regulatory complexity, and dynamic competition.
+          <mj-text font-family="Aptos, Calibri, sans-serif" padding-top="0px" font-size="15px" line-height="18px" padding-right="0px" padding-left="0px">A guide to help you navigate what’s next and lead the industry forward in a time of extraordinary technological disruption, shifting customer expectations, regulatory complexity, and dynamic competition.
           </mj-text>
         </mj-column>
         <mj-group width="100%">
