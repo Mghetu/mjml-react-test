@@ -444,6 +444,9 @@ add(
       </mj-section>
       <mj-section padding-top="0px" padding-bottom="0px" background-color="#007680">
         <mj-column padding-top="0px" padding-bottom="0px" padding-left="0px" padding-right="0px">
+          <mj-raw>
+            <a name="LINKTOP" id="LINKTOP"></a>
+          </mj-raw>
           <mj-text padding-top="20px" padding-bottom="15px" font-size="28px" font-family="Aptos, Calibri, sans-serif" font-weight="700" color="#ffffff">Industry News
           </mj-text>
         </mj-column>
@@ -510,7 +513,7 @@ add(
     'Article-Section 1',
     'MDM-template',
     `
-<mj-section padding-top="10px" padding-bottom="0px" background-color="#ffffff" padding-left="25px" padding-right="25px">
+<mj-section padding-top="15px" padding-bottom="0px" background-color="#ffffff" padding-left="25px" padding-right="25px">
         <mj-column padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" width="100%">
           <mj-text font-family="Aptos, Calibri, sans-serif" padding-top="5px" padding-bottom="0px" font-size="12px" line-height="18px" color="#97999b" font-weight="700" padding-right="0px" padding-left="0px">Raport
           </mj-text>
@@ -688,7 +691,18 @@ add(
   );
 
 
-
+add(
+    'Go-to-top',
+    'Go-to-top',
+    'MDM-template',
+    `
+ <mj-section padding-top="10px" padding-bottom="0px" background-color="#ffffff" padding-left="25px" text-align="right">
+        <mj-column padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" width="25%">
+          <mj-button font-size="14px" font-weight="700" color="#0313dd" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" align="right" font-family="Aptos, Calibri, sans-serif" width="100%" text-decoration="underline" border-radius="0px 0 0 0" background-color="#ffffff" href="#LINKTOP" target="_self">Go to top 
+          </mj-button>
+        </mj-column>
+      </mj-section>`
+  );
 
   
   
