@@ -672,8 +672,8 @@ add(
   
 
 add(
-    'Article-Section-3',
-    'Article-Section 3',
+    'Article-Section-4',
+    'Article-Section 4',
     'MDM-template',
     `
 <mj-section padding-top="10px" padding-bottom="0px" background-color="#ffffff">
