@@ -523,6 +523,8 @@ add(
           <mj-text font-family="Aptos, Calibri, sans-serif" padding-top="0px" font-size="15px" line-height="18px" padding-right="0px" padding-left="0px">A guide to help you navigate what’s next and lead the industry forward in a time of extraordinary technological disruption, shifting customer expectations, regulatory complexity, and dynamic competition.
           </mj-text>
         </mj-column>
+      </mj-section>
+      <mj-section padding-top="0px" padding-bottom="0px" background-color="#ffffff" padding-left="25px" padding-right="25px">
         <mj-group width="100%">
           <mj-column padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" width="30%">
             <mj-button background-color="#fbfbee" border-radius="20px 20px 20px 20px" font-size="11px" font-weight="700" color="#000000" padding-top="0px" padding-bottom="0px" padding-right="10px" padding-left="0px" align="left" font-family="Aptos, Calibri, sans-serif" width="100%">Download Report
@@ -579,12 +581,16 @@ add(
           <mj-text font-family="Aptos, Calibri, sans-serif" padding-top="5px" padding-bottom="5px" font-size="15px" line-height="18px" padding-right="0px" padding-left="0px">A guide to help you navigate what’s next and lead the industry forward in a time of extraordinary technological disruption, shifting customer expectations, regulatory complexity, and dynamic competition.
           </mj-text>
         </mj-column>
+      </mj-section>
+      <mj-section padding-top="0px" padding-bottom="0px" background-color="#ffffff" padding-left="25px" padding-right="25px">
         <mj-group width="100%">
           <mj-column padding-top="10px" padding-right="0px" padding-bottom="0px" padding-left="0px" width="30%">
             <mj-button border-radius="20px 20px 20px 20px" font-size="12px" font-weight="700" color="#000000" padding-top="0px" padding-bottom="0px" padding-right="10px" padding-left="0px" align="left" font-family="Aptos, Calibri, sans-serif" width="100%" background-color="#e1fdff" border="0 none black">Read the article
             </mj-button>
           </mj-column>
         </mj-group>
+      </mj-section>
+      <mj-section padding-bottom="0px" background-color="#ffffff" padding-left="25px" padding-right="25px" padding-top="0px">
         <mj-column vertical-align="middle" padding-top="20px" padding-bottom="5px" padding-right="0px" padding-left="0px" width="100%">
           <mj-spacer height="3px" container-background-color="#f5f5f5">
           </mj-spacer>
@@ -629,12 +635,16 @@ add(
           <mj-text font-family="Aptos, Calibri, sans-serif" padding-top="5px" padding-bottom="5px" font-size="15px" line-height="18px" padding-right="0px" padding-left="0px">A guide to help you navigate what’s next and lead the industry forward in a time of extraordinary technological disruption, shifting customer expectations, regulatory complexity, and dynamic competition.
           </mj-text>
         </mj-column>
+      </mj-section>
+      <mj-section padding-top="0px" padding-bottom="0px" background-color="#ffffff" padding-left="25px" padding-right="25px" text-align="left">
         <mj-group width="100%">
           <mj-column padding-top="10px" padding-right="0px" padding-bottom="0px" padding-left="0px" width="40%">
             <mj-button border-radius="20px 20px 20px 20px" font-size="12px" font-weight="700" color="#54728d" padding-top="0px" padding-bottom="0px" padding-right="10px" padding-left="0px" align="left" font-family="Aptos, Calibri, sans-serif" background-color="#d8fef3" border="0 none black">Read the article
             </mj-button>
           </mj-column>
         </mj-group>
+      </mj-section>
+      <mj-section padding-top="10px" padding-bottom="0px" background-color="#ffffff" padding-left="25px" padding-right="25px" text-align="left">
         <mj-column vertical-align="middle" padding-top="20px" padding-bottom="5px" padding-right="0px" padding-left="0px" width="100%">
           <mj-spacer height="3px" container-background-color="#f5f5f5">
           </mj-spacer>
