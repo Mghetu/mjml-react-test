@@ -585,8 +585,8 @@ add(
       <mj-section padding-top="0px" padding-bottom="0px" background-color="#ffffff" padding-left="25px" padding-right="25px">
         <mj-group width="100%">
           <mj-column padding-top="10px" padding-right="0px" padding-bottom="0px" padding-left="0px" width="30%">
-            <mj-button border-radius="20px 20px 20px 20px" font-size="12px" font-weight="700" color="#000000" padding-top="0px" padding-bottom="0px" padding-right="10px" padding-left="0px" align="left" font-family="Aptos, Calibri, sans-serif" width="100%" background-color="#e1fdff" border="0 none black">Read the article
-            </mj-button>
+            <mj-image src="https://media.deloitte.com/is/image/deloitte/Rea_the_article_1_MDM_100_2x" padding-top="0px" padding-bottom="0px" padding-right="10px" padding-left="0px">
+            </mj-image>
           </mj-column>
         </mj-group>
       </mj-section>
