@@ -638,9 +638,9 @@ add(
       </mj-section>
       <mj-section padding-top="0px" padding-bottom="0px" background-color="#ffffff" padding-left="25px" padding-right="25px" text-align="left">
         <mj-group width="100%">
-          <mj-column padding-top="10px" padding-right="0px" padding-bottom="0px" padding-left="0px" width="40%">
-            <mj-button border-radius="20px 20px 20px 20px" font-size="12px" font-weight="700" color="#54728d" padding-top="0px" padding-bottom="0px" padding-right="10px" padding-left="0px" align="left" font-family="Aptos, Calibri, sans-serif" background-color="#d8fef3" border="0 none black">Read the article
-            </mj-button>
+          <mj-column padding-top="10px" padding-right="0px" padding-bottom="0px" padding-left="0px" width="30%">
+            <mj-image src="https://media.deloitte.com/is/image/deloitte/Read_the_article_2_MDM_100_2x" padding-top="0px" padding-bottom="0px" padding-right="10px" padding-left="0px">
+            </mj-image>
           </mj-column>
         </mj-group>
       </mj-section>
