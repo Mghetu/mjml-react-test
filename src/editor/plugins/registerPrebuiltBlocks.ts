@@ -513,7 +513,7 @@ add(
     'Article-Section 1',
     'MDM-template',
     `
-<mj-section padding-top="15px" padding-bottom="0px" background-color="#ffffff" padding-left="25px" padding-right="25px">
+ <mj-section padding-top="15px" padding-bottom="0px" background-color="#ffffff" padding-left="25px" padding-right="25px">
         <mj-column padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" width="100%">
           <mj-text font-family="Aptos, Calibri, sans-serif" padding-top="5px" padding-bottom="0px" font-size="12px" line-height="18px" color="#97999b" font-weight="700" padding-right="0px" padding-left="0px">Raport
           </mj-text>
@@ -527,16 +527,16 @@ add(
       <mj-section padding-top="0px" padding-bottom="0px" background-color="#ffffff" padding-left="25px" padding-right="25px">
         <mj-group width="100%">
           <mj-column padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" width="30%">
-            <mj-button background-color="#fbfbee" border-radius="20px 20px 20px 20px" font-size="11px" font-weight="700" color="#000000" padding-top="0px" padding-bottom="0px" padding-right="10px" padding-left="0px" align="left" font-family="Aptos, Calibri, sans-serif" width="100%">Download Report
-            </mj-button>
-          </mj-column>
-          <mj-column padding-top="0px" padding-right="0px" padding-bottom="0px" padding-left="0px" width="30%">
-            <mj-button background-color="#e1fdff" border-radius="20px 20px 20px 20px" font-size="11px" font-weight="700" color="#000000" padding-top="0px" padding-bottom="0px" padding-right="10px" padding-left="0px" align="left" font-family="Aptos, Calibri, sans-serif" width="100%">Share on Linkedin
-            </mj-button>
+            <mj-image src="https://media.deloitte.com/is/image/deloitte/Download_Report_MDM_100_2x" padding-top="0px" padding-bottom="0px" padding-right="10px" padding-left="0px">
+            </mj-image>
           </mj-column>
           <mj-column padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" width="30%">
-            <mj-button background-color="#d8fef3" border-radius="20px 20px 20px 20px" font-size="11px" font-weight="700" color="#000000" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" align="left" font-family="Aptos, Calibri, sans-serif" width="100%">Share on Facebook 
-            </mj-button>
+            <mj-image src="https://media.deloitte.com/is/image/deloitte/Share_on_Linkedin_MDM_100_2x" padding-top="0px" padding-bottom="0px" padding-right="10px" padding-left="0px">
+            </mj-image>
+          </mj-column>
+          <mj-column padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" width="30%">
+            <mj-image src="https://media.deloitte.com/is/image/deloitte/Share_on_Facebook_MDM_100_2x" padding-top="0px" padding-bottom="0px" padding-right="10px" padding-left="0px">
+            </mj-image>
           </mj-column>
         </mj-group>
       </mj-section>`
