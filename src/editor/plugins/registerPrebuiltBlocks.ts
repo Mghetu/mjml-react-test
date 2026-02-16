@@ -714,6 +714,22 @@ add(
       </mj-section>`
   );
 
+
+add(
+    'Banner-1 MDM',
+    'Banner-1 MDM',
+    'MDM-template',
+    `
+  <mj-section padding-top="10px" padding-bottom="10px">
+        <mj-column padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+          <mj-image src="https://media.deloitte.com/is/image/deloitte/Banner_newsletter_MDM" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+          </mj-image>
+        </mj-column>
+      </mj-section>`
+  );
+
+
+
   
   
   // ===== ERDC (examples) =====
