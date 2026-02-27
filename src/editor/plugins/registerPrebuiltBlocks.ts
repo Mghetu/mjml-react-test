@@ -706,11 +706,18 @@ add(
     'Go-to-top',
     'MDM-template',
     `
- <mj-section padding-top="10px" padding-bottom="0px" background-color="#ffffff" padding-left="25px" text-align="right">
-        <mj-column padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" width="25%">
-          <mj-button font-size="14px" font-weight="700" color="#0313dd" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" align="right" font-family="Aptos, Calibri, sans-serif" width="100%" text-decoration="underline" border-radius="0px 0 0 0" background-color="#ffffff" href="#LINKTOP" target="_self">Go to top 
-          </mj-button>
-        </mj-column>
+  <mj-section padding-right="25px" text-align="right" background-color="#ffffff">
+        <mj-group width="100%">
+          <mj-column width="93%" vertical-align="middle" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+            <mj-text padding-right="15px" font-size="14px" align="right" font-family="Aptos, Calibri, sans-serif" font-weight="700" color="#0313dd" text-decoration="underline">
+              <a href="#LINKTOP">Go to top</a>
+            </mj-text>
+          </mj-column>
+          <mj-column width="7%" vertical-align="middle" padding-top="0px" padding-bottom="0px" padding-left="0px" padding-right="0px">
+            <mj-image src="https://media.deloitte.com/is/image/deloitte/arrow_MDM_top" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" align="right">
+            </mj-image>
+          </mj-column>
+        </mj-group>
       </mj-section>`
   );
 
