@@ -107,6 +107,62 @@ export default function registerPrebuiltBlocks(editor: Editor) {
       </mj-section>`
   );
 
+
+
+
+    add(
+    'MEM-special feature',
+    'MEM · special feature',
+    'MEM',
+    `
+<mj-section padding-top="0px" padding-bottom="0px">
+        <mj-column vertical-align="bottom" padding-right="0px" padding-left="0px" padding-bottom="0px" padding-top="16px">
+          <mj-divider padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" border-color="#8db924">
+          </mj-divider>
+        </mj-column>
+      </mj-section>
+      <mj-section padding-left="25px" padding-right="25px" background-color="#e6e6e6">
+        <mj-group>
+          <mj-column padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" width="10%">
+            <mj-image src="https://media.deloitte.com/is/image/deloitte/Circle_category_gri_100" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" align="left" width="60px">
+            </mj-image>
+          </mj-column>
+          <mj-column width="90%" padding-top="0px" padding-bottom="0px" padding-left="0px" padding-right="0px">
+            <mj-raw>
+              <a name="LINK1" id="LINK1"></a>
+            </mj-raw>
+            <mj-text padding-top="0px" padding-bottom="0px" padding-left="20px" font-size="28px" font-family="Aptos, Calibri, sans-serif" font-weight="700">Special Features 
+            </mj-text>
+            <mj-text padding-top="5px" padding-bottom="0px" padding-left="20px" font-size="16px" font-family="Aptos, Calibri, sans-serif" font-weight="700" color="#a8a8a8">Published February 23-27, 2026
+              <br/>
+            </mj-text>
+          </mj-column>
+        </mj-group>
+      </mj-section>
+      <mj-section padding-left="25px" padding-right="25px" padding-top="10px" padding-bottom="10px" background-color="#e6e6e6">
+        <mj-group>
+          <mj-column width="40%" vertical-align="middle" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+            <mj-image src="https://placehold.co/200x110" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" align="left">
+            </mj-image>
+          </mj-column>
+          <mj-column width="60%" vertical-align="middle" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+            <mj-text padding-top="0px" padding-bottom="3px" padding-right="10px" padding-left="10px" font-family="Aptos, Calibri, sans-serif" font-size="15px" font-weight="400" line-height="16px">Ionescu Popescu- function &amp; Ionescu Popescu- function &amp; Ionescu Popescu- function &amp; Ionescu Popescu- function &amp; Ionescu Popescu- function &amp;
+              <br/>dsadsadasdad
+            </mj-text>
+            <mj-text padding-top="0px" padding-bottom="3px" padding-right="10px" padding-left="10px" color="#5849e4" text-decoration="underline" font-family="Aptos, Calibri, sans-serif" font-size="12px" font-weight="500">
+              <a>vezi articol &gt;</a>
+            </mj-text>
+          </mj-column>
+        </mj-group>
+      </mj-section>`
+  );
+
+
+  
+
+
+
+
   
 
   add(
