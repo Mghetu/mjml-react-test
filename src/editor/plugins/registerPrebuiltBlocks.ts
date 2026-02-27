@@ -758,13 +758,11 @@ add(
     '1 Button general MDM',
     'MDM-template',
     `
-   <mj-section padding-top="0px" padding-bottom="0px" background-color="#ffffff" padding-right="25px">
-        <mj-group width="100%">
+     <mj-section padding-top="0px" padding-bottom="0px" background-color="#ffffff" padding-right="25px">        
           <mj-column padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" width="100%">
-            <mj-button border-radius="0px 0px 0px 0px" font-size="14px" font-weight="700" color="#5e35bd" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" font-family="Aptos, Calibri, sans-serif" background-color="#ffffff" text-decoration="underline" align="left">Scrie Aici
+            <mj-button border-radius="0px 0px 0px 0px" font-size="14px" font-weight="700" color="#5e35bd" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" font-family="Aptos, Calibri, sans-serif" background-color="#ffffff" text-decoration="underline" text-align="left">Scrie Aici dsadsada sadadsadsad sdadsadsadsa sdadsadasd sdadsada sadsadsad sdsadadad sdadsad
             </mj-button>
-          </mj-column>
-        </mj-group>
+          </mj-column>        
       </mj-section>`
   );
 
