@@ -762,18 +762,11 @@ add(
     'Go-to-top',
     'MDM-template',
     `
-  <mj-section padding-right="25px" text-align="right" background-color="#ffffff">
-        <mj-group width="100%">
-          <mj-column width="93%" vertical-align="middle" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
-            <mj-text padding-right="15px" font-size="14px" align="right" font-family="Aptos, Calibri, sans-serif" font-weight="700" color="#0313dd" text-decoration="underline">
-              <a href="#LINKTOP">Go to top</a>
-            </mj-text>
-          </mj-column>
-          <mj-column width="7%" vertical-align="middle" padding-top="0px" padding-bottom="0px" padding-left="0px" padding-right="0px">
-            <mj-image src="https://media.deloitte.com/is/image/deloitte/arrow_MDM_top" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" align="right">
-            </mj-image>
-          </mj-column>
-        </mj-group>
+  <mj-section padding-right="25px" text-align="right" background-color="#ffffff" padding-bottom="10px">
+        <mj-column width="20%" vertical-align="middle" padding-top="0px" padding-bottom="0px" padding-left="0px" padding-right="0px">
+          <mj-image src="https://media.deloitte.com/is/image/deloitte/Buton_Back_to_top" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px" align="right" href="#LINKTOP" target="_self">
+          </mj-image>
+        </mj-column>
       </mj-section>`
   );
 
@@ -792,6 +785,22 @@ add(
   );
 
 
+add(
+    'Banner-Industry knowledge MDM',
+    'Banner-Industry knowledge MDM',
+    'MDM-template',
+    `
+  <mj-section padding-top="10px" padding-bottom="10px">
+        <mj-column padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+          <mj-image src="https://media.deloitte.com/is/image/deloitte/Banner_Industry%20Knowledge%20skills" padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+          </mj-image>
+        </mj-column>
+      </mj-section>`
+  );
+
+
+
+  
 add(
     '3 Button general MDM',
     '3 Button general MDM',
