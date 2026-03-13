@@ -866,48 +866,125 @@ add(
           </mj-text>
         </mj-column>
       </mj-section>
-    <mj-section padding-top="10px" padding-bottom="0px">
-  <mj-column padding="0">
-    <mj-raw>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-        <tr>
-          <td align="center" valign="top" style="width:25%; padding:0 10px 10px 0;">
-            <a href="#LINK1" target="_self" style="text-decoration:none; color:#000000;">
-              <img src="https://media.deloitte.com/is/image/deloitte/Share_nav" width="45" border="0" style="display:block; margin:0 auto;" alt="">
-              <div style="font-family:Aptos, Calibri, sans-serif; font-size:14px; line-height:18px; text-align:center; padding-top:8px;">
-                Share with your clients
-              </div>
-            </a>
-          </td>
-          <td align="center" valign="top" style="width:25%; padding:0 5px 10px 5px;">
-            <a href="#LINK2" target="_self" style="text-decoration:none; color:#000000;">
-              <img src="https://media.deloitte.com/is/image/deloitte/Local_news_nav" width="45" border="0" style="display:block; margin:0 auto;" alt="">
-              <div style="font-family:Aptos, Calibri, sans-serif; font-size:14px; line-height:18px; text-align:center; padding-top:8px;">
-                Local News
-              </div>
-            </a>
-          </td>
-          <td align="center" valign="top" style="width:25%; padding:0 5px 10px 5px;">
-            <a href="#LINK3" target="_self" style="text-decoration:none; color:#000000;">
-              <img src="https://media.deloitte.com/is/image/deloitte/Global_nav_MDM" width="45" border="0" style="display:block; margin:0 auto;" alt="">
-              <div style="font-family:Aptos, Calibri, sans-serif; font-size:14px; line-height:18px; text-align:center; padding-top:8px;">
-                World News
-              </div>
-            </a>
-          </td>
-          <td align="center" valign="top" style="width:25%; padding:0 0 10px 10px;">
-            <a href="#LINK4" target="_self" style="text-decoration:none; color:#000000;">
-              <img src="https://media.deloitte.com/is/image/deloitte/Events_nav_MDM" width="45" border="0" style="display:block; margin:0 auto;" alt="">
-              <div style="font-family:Aptos, Calibri, sans-serif; font-size:14px; line-height:18px; text-align:center; padding-top:8px;">
-                Events &amp; Webinars
-              </div>
-            </a>
-          </td>
-        </tr>
-      </table>
-    </mj-raw>
-  </mj-column>
-</mj-section>`
+      <mj-section padding="10px 0 0 0">
+        <mj-column padding="0">
+          <mj-raw>
+            <table
+              role="presentation"
+              width="100%"
+              cellpadding="0"
+              cellspacing="0"
+              border="0"
+              style="width:100% !important; min-width:100%; max-width:100%; border-collapse:collapse; table-layout:fixed; margin:0; padding:0;">
+              <tr>
+                <td width="25%" align="center" valign="top" style="padding:0 10px 10px 0;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+                    <tr>
+                      <td align="center" style="padding:0;">
+                        <a href="#LINK1" target="_self" style="text-decoration:none; color:#000000;">
+                          <img
+                            src="https://media.deloitte.com/is/image/deloitte/Share_nav"
+                            width="45"
+                            border="0"
+                            alt=""
+                            style="display:block; margin:0 auto; border:0; outline:none; text-decoration:none;">
+                        </a>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td
+                        align="center"
+                        style="padding:8px 0 0 0; font-family:Aptos, Calibri, sans-serif; font-size:14px; line-height:18px; color:#000000;">
+                        <a href="#LINK1" target="_self" style="text-decoration:none; color:#000000;">
+                          Share with your clients
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+
+                <td width="25%" align="center" valign="top" style="padding:0 5px 10px 5px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+                    <tr>
+                      <td align="center" style="padding:0;">
+                        <a href="#LINK2" target="_self" style="text-decoration:none; color:#000000;">
+                          <img
+                            src="https://media.deloitte.com/is/image/deloitte/Local_news_nav"
+                            width="45"
+                            border="0"
+                            alt=""
+                            style="display:block; margin:0 auto; border:0; outline:none; text-decoration:none;">
+                        </a>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td
+                        align="center"
+                        style="padding:8px 0 0 0; font-family:Aptos, Calibri, sans-serif; font-size:14px; line-height:18px; color:#000000;">
+                        <a href="#LINK2" target="_self" style="text-decoration:none; color:#000000;">
+                          Local News
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+
+                <td width="25%" align="center" valign="top" style="padding:0 5px 10px 5px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+                    <tr>
+                      <td align="center" style="padding:0;">
+                        <a href="#LINK3" target="_self" style="text-decoration:none; color:#000000;">
+                          <img
+                            src="https://media.deloitte.com/is/image/deloitte/Global_nav_MDM"
+                            width="45"
+                            border="0"
+                            alt=""
+                            style="display:block; margin:0 auto; border:0; outline:none; text-decoration:none;">
+                        </a>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td
+                        align="center"
+                        style="padding:8px 0 0 0; font-family:Aptos, Calibri, sans-serif; font-size:14px; line-height:18px; color:#000000;">
+                        <a href="#LINK3" target="_self" style="text-decoration:none; color:#000000;">
+                          World News
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+
+                <td width="25%" align="center" valign="top" style="padding:0 0 10px 10px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+                    <tr>
+                      <td align="center" style="padding:0;">
+                        <a href="#LINK4" target="_self" style="text-decoration:none; color:#000000;">
+                          <img
+                            src="https://media.deloitte.com/is/image/deloitte/Events_nav_MDM"
+                            width="45"
+                            border="0"
+                            alt=""
+                            style="display:block; margin:0 auto; border:0; outline:none; text-decoration:none;">
+                        </a>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td
+                        align="center"
+                        style="padding:8px 0 0 0; font-family:Aptos, Calibri, sans-serif; font-size:14px; line-height:18px; color:#000000;">
+                        <a href="#LINK4" target="_self" style="text-decoration:none; color:#000000;">
+                          Events &amp; Webinars
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </mj-raw>
+        </mj-column>
+      </mj-section>`
   );
 
   
