@@ -840,6 +840,79 @@ add(
 
 
 
+add(
+    'test Header with logo mobile',
+    'test Header with logo',
+    'MDM-template',
+    `
+  <mj-section padding-top="10px" padding-bottom="10px" text-align="left" background-color="#000000">
+        <mj-column padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+          <mj-image src="https://media.deloitte.com/is/image/deloitte/Logo_Deloitte_newsletter_MEM_101" padding-top="0px" padding-bottom="0px" align="left" width="170px">
+          </mj-image>
+        </mj-column>
+      </mj-section>
+      <mj-section padding-top="0px" padding-bottom="0px">
+        <mj-column padding-top="0px" padding-bottom="0px" padding-right="0px" padding-left="0px">
+          <mj-text font-family="Aptos, Calibri, sans-serif" font-size="10px" color="#8f8f8f">Country | Industry | Month day, year | Internal Distribution Only
+          </mj-text>
+        </mj-column>
+      </mj-section>
+      <mj-section padding-top="0px" padding-bottom="0px" background-color="#007680">
+        <mj-column padding-top="0px" padding-bottom="0px" padding-left="0px" padding-right="0px">
+          <mj-raw>
+            <a name="LINKTOP" id="LINKTOP"></a>
+          </mj-raw>
+          <mj-text padding-top="20px" padding-bottom="15px" font-size="28px" font-family="Aptos, Calibri, sans-serif" font-weight="700" color="#ffffff">Industry News
+          </mj-text>
+        </mj-column>
+      </mj-section>
+     <mj-section padding-top="10px" padding-bottom="0px">
+  <mj-column padding="0">
+    <mj-table padding="0" width="100%">
+      <tr>
+        <td align="center" valign="top" class="nav-item" style="padding:0 10px 10px 0; width:25%;">
+          <a href="#LINK1" target="_self" style="text-decoration:none;">
+            <img src="https://media.deloitte.com/is/image/deloitte/Share_nav" width="45" style="display:block; margin:0 auto; border:0;" alt="" />
+            <div style="font-family:Aptos, Calibri, sans-serif; font-size:14px; line-height:18px; color:#000000; text-align:center; padding-top:8px;">
+              Share with your clients
+            </div>
+          </a>
+        </td>
+
+        <td align="center" valign="top" class="nav-item" style="padding:0 5px 10px 5px; width:25%;">
+          <a href="#LINK2" target="_self" style="text-decoration:none;">
+            <img src="https://media.deloitte.com/is/image/deloitte/Local_news_nav" width="45" style="display:block; margin:0 auto; border:0;" alt="" />
+            <div style="font-family:Aptos, Calibri, sans-serif; font-size:14px; line-height:18px; color:#000000; text-align:center; padding-top:8px;">
+              Local News
+            </div>
+          </a>
+        </td>
+
+        <td align="center" valign="top" class="nav-item" style="padding:0 5px 10px 5px; width:25%;">
+          <a href="#LINK3" target="_self" style="text-decoration:none;">
+            <img src="https://media.deloitte.com/is/image/deloitte/Global_nav_MDM" width="45" style="display:block; margin:0 auto; border:0;" alt="" />
+            <div style="font-family:Aptos, Calibri, sans-serif; font-size:14px; line-height:18px; color:#000000; text-align:center; padding-top:8px;">
+              World News
+            </div>
+          </a>
+        </td>
+
+        <td align="center" valign="top" class="nav-item" style="padding:0 0 10px 10px; width:25%;">
+          <a href="#LINK4" target="_self" style="text-decoration:none;">
+            <img src="https://media.deloitte.com/is/image/deloitte/Events_nav_MDM" width="45" style="display:block; margin:0 auto; border:0;" alt="" />
+            <div style="font-family:Aptos, Calibri, sans-serif; font-size:14px; line-height:18px; color:#000000; text-align:center; padding-top:8px;">
+              Events &amp; Webinars
+            </div>
+          </a>
+        </td>
+      </tr>
+    </mj-table>
+  </mj-column>
+</mj-section>`
+  );
+
+  
+
 
   
 
