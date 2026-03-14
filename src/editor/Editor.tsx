@@ -380,7 +380,7 @@ const initialTemplate = [
   '  <mj-body background-color="#F5F5F5">', // fallback; wrapper paints Outlook-safe bg',
   '',
   '    <!-- Outlook-safe page background + 20px side gap on mobile -->',
-  '    <mj-wrapper border-radius="0px" border-top="none" padding-bottom="0px" background-repeat="no-repeat" border-right="none" background-position="top center" border="none" border-bottom="none" direction="ltr" text-align="center" background-size="auto" border-left="none" padding-left="10px" padding-right="10px" padding-top="0px" padding-bottom="20px" background-color="#F5F5F5" full-width="full-width">', 
+  '    <mj-wrapper border-radius="0px" border-top="none" padding-bottom="13px" background-repeat="no-repeat" border-right="none" background-position="top center" border="none" border-bottom="none" direction="ltr" text-align="center" background-size="auto" border-left="none" padding-left="10px" padding-right="10px" padding-top="0px" background-color="#F5F5F5" full-width="full-width">', 
   '',
   '      <!-- HEADER / STRIP (600px centered via body width) -->',
   '      <mj-section background-color="#86BD40" padding="12px 24px">',
