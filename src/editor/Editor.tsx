@@ -377,6 +377,11 @@ export default function Editor() {
 
 const initialTemplate = [
   '<mjml>',
+    '',
+  '  <mj-head>',
+  '    <mj-preview>Latest updates.&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</mj-preview>',
+  '  </mj-head>',
+  '',
   '  <mj-body background-color="#F5F5F5">', // fallback; wrapper paints Outlook-safe bg',
   '',
   '    <!-- Outlook-safe page background + 20px side gap on mobile -->',
