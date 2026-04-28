@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 
 const SESSION_COOKIE_NAME = 'mjml_auth';
-const SESSION_MAX_AGE_SECONDS = 60 * 60 * 8;
+const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 
 const textEncoder = new TextEncoder();
 
