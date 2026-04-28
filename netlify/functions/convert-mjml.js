@@ -194,12 +194,14 @@ export const handler = async (event) => {
 
   let result;
   try {
-    result = mjml2html(optimizedMjml, {
-      validationLevel: 'strict',
-      minify: true,
-      beautify: false,
-      keepComments: false,
-    });
+    result = await Promise.resolve(
+      mjml2html(optimizedMjml, {
+        validationLevel: 'strict',
+        minify: true,
+        beautify: false,
+        keepComments: false,
+      }),
+    );
   } catch (error) {
     console.error('MJML conversion runtime error:', error);
     return createResponse(500, {
@@ -207,12 +209,28 @@ export const handler = async (event) => {
     });
   }
 
-  if (Array.isArray(result.errors) && result.errors.length > 0) {
-    return createResponse(400, { errors: result.errors });
+  if (!result || typeof result !== 'object') {
+    return createResponse(500, {
+      error: 'MJML conversion produced an invalid response shape.',
+    });
+  }
+
+  const htmlOutput =
+    typeof result.html === 'string' ? result.html : '';
+  const resultErrors = Array.isArray(result.errors) ? result.errors : [];
+
+  if (resultErrors.length > 0) {
+    return createResponse(400, { errors: resultErrors });
+  }
+
+  if (!htmlOutput) {
+    return createResponse(500, {
+      error: 'MJML conversion completed without HTML output.',
+    });
   }
 
   return createResponse(200, {
-    html: result.html,
+    html: htmlOutput,
     optimizedMjml,
   });
 };
