@@ -1,5 +1,15 @@
-import mjml2html from 'mjml';
-import tinify from 'tinify';
+import mjmlModule from 'mjml';
+import tinifyModule from 'tinify';
+
+const mjml2html =
+  typeof mjmlModule === 'function'
+    ? mjmlModule
+    : mjmlModule?.default;
+
+const tinify =
+  tinifyModule?.default && typeof tinifyModule.default === 'object'
+    ? tinifyModule.default
+    : tinifyModule;
 
 const DATA_IMAGE_SRC_REGEX =
   /(<mj-image\b[^>]*\bsrc\s*=\s*)(["'])(data:image\/[^"']+)\2/gi;
@@ -117,6 +127,12 @@ const optimizeHttpImagesInMjml = async (mjml) => {
 };
 
 export const handler = async (event) => {
+  if (typeof mjml2html !== 'function') {
+    return createResponse(500, {
+      error: 'MJML converter failed to load in serverless runtime.',
+    });
+  }
+
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 204 };
   }
@@ -155,7 +171,16 @@ export const handler = async (event) => {
     });
   }
 
-  const query = new URLSearchParams(event.rawQuery || '');
+  const queryString =
+    typeof event.rawQuery === 'string'
+      ? event.rawQuery
+      : typeof event.queryStringParameters === 'object' &&
+          event.queryStringParameters !== null
+        ? Object.entries(event.queryStringParameters)
+            .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value ?? '')}`)
+            .join('&')
+        : '';
+  const query = new URLSearchParams(queryString);
   if (query.get('optimizeRemoteImages') === '1') {
     try {
       optimizedMjml = await optimizeHttpImagesInMjml(optimizedMjml);
@@ -167,12 +192,20 @@ export const handler = async (event) => {
     }
   }
 
-  const result = mjml2html(optimizedMjml, {
-    validationLevel: 'strict',
-    minify: true,
-    beautify: false,
-    keepComments: false,
-  });
+  let result;
+  try {
+    result = mjml2html(optimizedMjml, {
+      validationLevel: 'strict',
+      minify: true,
+      beautify: false,
+      keepComments: false,
+    });
+  } catch (error) {
+    console.error('MJML conversion runtime error:', error);
+    return createResponse(500, {
+      error: 'MJML conversion failed in serverless runtime.',
+    });
+  }
 
   if (Array.isArray(result.errors) && result.errors.length > 0) {
     return createResponse(400, { errors: result.errors });
