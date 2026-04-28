@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  // Netlify serves from site root, while GitHub Pages needs the repo base path.
-  base: process.env.NETLIFY === 'true' ? '/' : '/mjml-react-test/',
+  // Default to root for Netlify/static hosts. Override with VITE_PUBLIC_BASE when needed.
+  base: process.env.VITE_PUBLIC_BASE || '/',
   build: { outDir: 'dist', target: 'esnext' },
 });
