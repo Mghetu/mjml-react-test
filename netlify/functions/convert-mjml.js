@@ -1,5 +1,6 @@
 import mjmlModule from 'mjml';
 import tinifyModule from 'tinify';
+import { isRequestAuthenticated } from './_auth.js';
 
 const mjml2html =
   typeof mjmlModule === 'function'
@@ -139,6 +140,10 @@ export const handler = async (event) => {
 
   if (event.httpMethod !== 'POST') {
     return createResponse(405, { error: 'Method Not Allowed' });
+  }
+
+  if (!isRequestAuthenticated(event)) {
+    return createResponse(401, { error: 'Authentication required.' });
   }
 
   const apiKey = process.env.TINIFY_API_KEY;

@@ -40,11 +40,14 @@ The HTML export endpoint is implemented as a Netlify Function at `/api/convert-m
 
 1. Set the Tinify API key in Netlify:
    - Variable name: `TINIFY_API_KEY`
-2. Run the app locally with Netlify Functions:
+2. Set access-control variables in Netlify:
+   - `APP_ACCESS_PASSWORD`: shared password required by the login screen
+   - `SESSION_SECRET`: long random secret used to sign auth cookies
+3. Run the app locally with Netlify Functions:
    ```bash
    npm run dev:netlify
    ```
-3. For deployment, connect the repo in Netlify. Build settings are defined in `netlify.toml`.
+4. For deployment, connect the repo in Netlify. Build settings are defined in `netlify.toml`.
 
 ## Development Notes
 - The GrapesJS storage manager is disabled; designs persist only for the active session. Configure `storageManager` in `src/editor/Editor.tsx` to enable persistence.
