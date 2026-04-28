@@ -1,10 +1,10 @@
 // tests/convert-mjml.test.js
 // Simple reproducibility harness for /api/convert-mjml 405 errors.
 // Run with: node tests/convert-mjml.test.js
-// Defaults to the expected dev server host: http://localhost:3001/api/convert-mjml
+// Defaults to Netlify local dev host: http://localhost:8888/api/convert-mjml
 // You can override via the MJML_CONVERT_URL env var.
 
-const endpoint = process.env.MJML_CONVERT_URL || 'http://localhost:3001/api/convert-mjml';
+const endpoint = process.env.MJML_CONVERT_URL || 'http://localhost:8888/api/convert-mjml';
 const sampleMjml = '<mjml><mj-body><mj-section><mj-column><mj-text>Test</mj-text></mj-column></mj-section></mj-body></mjml>';
 
 async function testConvert() {

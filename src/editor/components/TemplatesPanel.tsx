@@ -240,7 +240,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     downloadFile(mjmlMarkup, 'template.mjml', 'application/vnd.mjml+xml');
   }, [downloadFile, editor]);
 
-  const handleConvertMjmlToHtml = useCallback(() => {
+  const handleConvertMjmlToHtml = useCallback(async () => {
     if (!editor) {
       window.alert('Editor is not ready yet.');
       return;
@@ -249,7 +249,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     setIsConverting(true);
 
     try {
-      convertCurrentMjmlToHtml(editor);
+      await convertCurrentMjmlToHtml(editor);
     } finally {
       setIsConverting(false);
     }

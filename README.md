@@ -34,8 +34,20 @@ Additional architectural details and extension ideas are documented in [`docs/CO
    ```
 3. Open the provided localhost URL in your browser to interact with the editor.
 
+### Netlify (with Tinify image compression)
+
+The HTML export endpoint is implemented as a Netlify Function at `/api/convert-mjml`.
+
+1. Set the Tinify API key in Netlify:
+   - Variable name: `TINIFY_API_KEY`
+2. Run the app locally with Netlify Functions:
+   ```bash
+   npm run dev:netlify
+   ```
+3. For deployment, connect the repo in Netlify. Build settings are defined in `netlify.toml`.
+
 ## Development Notes
 - The GrapesJS storage manager is disabled; designs persist only for the active session. Configure `storageManager` in `src/editor/Editor.tsx` to enable persistence.
 - Blocks, traits, and styles are rendered via providers from `@grapesjs/react`. Customize these components to extend the editor experience.
 - ESLint and TypeScript settings follow the default Vite template. Update `eslint.config.js` and the `tsconfig` files as needed for your tooling preferences.
-- MJML → HTML conversion in the hosted editor is handled entirely in the browser via `mjml-browser`, so the `/api/convert-mjml` endpoint is not required for GitHub Pages deployments.
+- MJML → HTML conversion now runs server-side in Netlify Functions so uploaded inline images can be compressed via Tinify before download.

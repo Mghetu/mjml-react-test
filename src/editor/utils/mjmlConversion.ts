@@ -1,47 +1,60 @@
 // src/editor/utils/mjmlConversion.ts
 import type { Editor } from 'grapesjs';
-// We use mjml-browser for client-side MJML → HTML conversion so the editor works on GitHub Pages without any backend API.
-import mjml2html from 'mjml-browser';
+import { sanitizeMjmlMarkup } from './mjml';
 
-export function convertCurrentMjmlToHtml(editor: Editor) {
-  const mjml = editor.getHtml();
+const formatError = (error: unknown) => {
+  if (error && typeof error === 'object') {
+    const typedError = error as { formattedMessage?: string; message?: string };
+    return typedError.formattedMessage || typedError.message || JSON.stringify(error);
+  }
+
+  if (typeof error === 'string') {
+    return error;
+  }
 
   try {
-    const { html, errors } = mjml2html(mjml, {
-      validationLevel: 'strict',
-      minify: true,
-      beautify: false,
-      keepComments: false,
+    return JSON.stringify(error);
+  } catch {
+    return 'Unknown error.';
+  }
+};
+
+export async function convertCurrentMjmlToHtml(editor: Editor) {
+  const mjml = sanitizeMjmlMarkup(editor.getHtml());
+
+  if (!mjml || mjml.trim().length === 0) {
+    alert('There is no MJML content to export.');
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/convert-mjml', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ mjml }),
     });
 
-    if (errors && errors.length > 0) {
-      console.error('MJML validation errors:', errors);
-      alert(
-        'MJML validation errors:\n\n' +
-          errors
-            .map((e: unknown) => {
-              if (e && typeof e === 'object') {
-                const error = e as { formattedMessage?: string; message?: string };
-                return error.formattedMessage || error.message || JSON.stringify(e);
-              }
+    const payload = (await response.json().catch(() => null)) as
+      | { html?: string; errors?: unknown[]; error?: string }
+      | null;
 
-              if (typeof e === 'string') {
-                return e;
-              }
-
-              try {
-                return JSON.stringify(e);
-              } catch (serializationError) {
-                console.error('Unable to serialize MJML error', serializationError);
-                return 'Unknown MJML validation error.';
-              }
-            })
-            .join('\n')
-      );
+    if (!response.ok) {
+      const validationErrors = Array.isArray(payload?.errors)
+        ? payload.errors.map(formatError).join('\n')
+        : null;
+      const message = validationErrors || payload?.error || `Request failed (${response.status}).`;
+      alert(`MJML export failed:\n\n${message}`);
       return;
     }
 
-    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    if (!payload?.html) {
+      alert('MJML export failed: server did not return HTML output.');
+      return;
+    }
+
+    const blob = new Blob([payload.html], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -53,7 +66,9 @@ export function convertCurrentMjmlToHtml(editor: Editor) {
     const message =
       typeof err === 'object' && err && 'message' in err ? String((err as { message?: unknown }).message) : null;
     alert(
-      'MJML conversion failed:\n\n' + (message ?? 'Unknown error, see console for details.')
+      'MJML export failed:\n\n' +
+        (message ??
+          'Could not reach /api/convert-mjml. Use Netlify Functions (netlify dev or deployed site).')
     );
   }
 }
