@@ -517,6 +517,16 @@ const initialTemplate = [
               const canvasStyle = iframe.contentDocument.createElement('style');
               canvasStyle.id = 'mjml-padding-fix';
               canvasStyle.textContent = `
+                /* Editor-only canvas background to reduce eye strain */
+                html,
+                body {
+                  background: #3f4758 !important;
+                }
+
+                [data-gjs-type="mj-body"] {
+                  background-color: #3f4758 !important;
+                }
+
                 /* Ensure MJML wrapper components have minimum height */
                 [data-gjs-type="mj-body"],
                 [data-gjs-type="mj-wrapper"],

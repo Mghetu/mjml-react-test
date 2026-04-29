@@ -693,7 +693,7 @@
 
 .canvas-area {
   flex: 1;
-  background: var(--gjs-soft-light-color);
+  background: #3f4758;
   border: 1px solid var(--gjs-main-dark-color);
   border-radius: 2px;
   padding: 0;
@@ -701,7 +701,12 @@
 }
 
 .gjs-cv-canvas {
-  background: transparent;
+  background: #3f4758 !important;
+}
+
+.gjs-cv-canvas .gjs-frame-wrapper {
+  background: #3f4758 !important;
+  border-color: #313a4b;
 }
 
 .gjs-frame {
