@@ -235,6 +235,10 @@
   border-top: 1px solid var(--gjs-main-dark-color);
 }
 
+.templates-action-group--database .templates-action-row {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .templates-group-title {
   margin: 0;
   font-size: 0.72rem;
@@ -265,8 +269,17 @@
     color var(--gjs-animation-duration);
 }
 
+.templates-action-button--tall {
+  min-height: 64px;
+  line-height: 1.35;
+}
+
 .templates-action-button--full {
   width: 100%;
+}
+
+.templates-action-button--nowrap {
+  white-space: nowrap;
 }
 
 .templates-action-button:hover,

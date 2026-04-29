@@ -13,11 +13,88 @@ import {
 
 const MAX_TEMPLATE_SIZE = 5 * 1024 * 1024; // 5MB
 const MAX_REMOTE_TEMPLATE_SIZE = 2 * 1024 * 1024; // 2MB (matches backend guardrail)
-const LOCAL_SESSION_KEY = 'mjml-editor-local-session-v1';
-const AUTOSAVE_IDLE_MS = 20 * 1000;
+const LOCAL_SESSION_KEY_PREFIX = 'mjml-editor-local-session-v1';
+const AUTOSAVE_IDLE_MS = 5 * 1000;
 const FINGERPRINT_DEBOUNCE_MS = 350;
 const SESSION_DB_NAME = 'mjml-editor-session-db';
 const SESSION_DB_STORE = 'sessions';
+const TAB_SESSION_ID_KEY = 'mjml-editor-tab-session-id-v1';
+const TAB_SESSION_OWNER_PREFIX = 'mjml-editor-tab-owner-v1';
+const SESSION_RETENTION_DAYS = 7;
+const SESSION_RETENTION_MS = SESSION_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+const TAB_SESSION_LEASE_MS = 15 * 1000;
+const TAB_SESSION_HEARTBEAT_MS = 5 * 1000;
+
+const createTabSessionId = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+};
+
+const getTabSessionId = (ownerToken: string) => {
+  if (typeof window === 'undefined') {
+    return 'ssr';
+  }
+
+  const readClaim = (tabSessionId: string): { ownerToken: string; updatedAt: number } | null => {
+    const claimKey = `${TAB_SESSION_OWNER_PREFIX}:${tabSessionId}`;
+    const raw = window.localStorage.getItem(claimKey);
+    if (!raw) {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as { ownerToken?: unknown; updatedAt?: unknown };
+      if (
+        typeof parsed.ownerToken === 'string' &&
+        typeof parsed.updatedAt === 'number' &&
+        Number.isFinite(parsed.updatedAt)
+      ) {
+        return { ownerToken: parsed.ownerToken, updatedAt: parsed.updatedAt };
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
+  const writeClaim = (tabSessionId: string) => {
+    const claimKey = `${TAB_SESSION_OWNER_PREFIX}:${tabSessionId}`;
+    window.localStorage.setItem(
+      claimKey,
+      JSON.stringify({
+        ownerToken,
+        updatedAt: Date.now(),
+      }),
+    );
+  };
+
+  const hasActiveOwner = (tabSessionId: string) => {
+    const claim = readClaim(tabSessionId);
+    if (!claim) {
+      return false;
+    }
+    if (claim.ownerToken === ownerToken) {
+      return false;
+    }
+    return Date.now() - claim.updatedAt < TAB_SESSION_LEASE_MS;
+  };
+
+  let candidate = window.sessionStorage.getItem(TAB_SESSION_ID_KEY) || createTabSessionId();
+
+  // Ensure uniqueness even when the browser duplicates sessionStorage.
+  while (hasActiveOwner(candidate)) {
+    candidate = createTabSessionId();
+    window.sessionStorage.setItem(TAB_SESSION_ID_KEY, candidate);
+  }
+
+  window.sessionStorage.setItem(TAB_SESSION_ID_KEY, candidate);
+  writeClaim(candidate);
+  return candidate;
+};
+
+const buildLocalSessionKey = (tabSessionId: string) => `${LOCAL_SESSION_KEY_PREFIX}:tab:${tabSessionId}`;
 
 type RecentKind = 'mjml' | 'json';
 
@@ -71,11 +148,11 @@ const openSessionDb = () =>
     request.onerror = () => reject(request.error ?? new Error('Failed to open IndexedDB.'));
   });
 
-const writeSessionToIndexedDb = async (value: string) => {
+const writeSessionToIndexedDb = async (key: string, value: string) => {
   const db = await openSessionDb();
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction(SESSION_DB_STORE, 'readwrite');
-    tx.objectStore(SESSION_DB_STORE).put(value, LOCAL_SESSION_KEY);
+    tx.objectStore(SESSION_DB_STORE).put(value, key);
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error ?? new Error('Failed to write session to IndexedDB.'));
     tx.onabort = () => reject(tx.error ?? new Error('Failed to write session to IndexedDB.'));
@@ -83,11 +160,11 @@ const writeSessionToIndexedDb = async (value: string) => {
   db.close();
 };
 
-const readSessionFromIndexedDb = async () => {
+const readSessionFromIndexedDb = async (key: string) => {
   const db = await openSessionDb();
   const result = await new Promise<string | null>((resolve, reject) => {
     const tx = db.transaction(SESSION_DB_STORE, 'readonly');
-    const request = tx.objectStore(SESSION_DB_STORE).get(LOCAL_SESSION_KEY);
+    const request = tx.objectStore(SESSION_DB_STORE).get(key);
     request.onsuccess = () => resolve(typeof request.result === 'string' ? request.result : null);
     request.onerror = () => reject(request.error ?? new Error('Failed to read session from IndexedDB.'));
   });
@@ -95,16 +172,64 @@ const readSessionFromIndexedDb = async () => {
   return result;
 };
 
-const clearSessionFromIndexedDb = async () => {
+const clearSessionFromIndexedDb = async (key: string) => {
   const db = await openSessionDb();
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction(SESSION_DB_STORE, 'readwrite');
-    tx.objectStore(SESSION_DB_STORE).delete(LOCAL_SESSION_KEY);
+    tx.objectStore(SESSION_DB_STORE).delete(key);
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error ?? new Error('Failed to clear session from IndexedDB.'));
     tx.onabort = () => reject(tx.error ?? new Error('Failed to clear session from IndexedDB.'));
   });
   db.close();
+};
+
+const purgeExpiredLocalSessions = async () => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const now = Date.now();
+  const keysToDelete: string[] = [];
+
+  for (let i = 0; i < window.localStorage.length; i += 1) {
+    const key = window.localStorage.key(i);
+    if (!key || !key.startsWith(`${LOCAL_SESSION_KEY_PREFIX}:tab:`)) {
+      continue;
+    }
+
+    const raw = window.localStorage.getItem(key);
+    if (!raw) {
+      keysToDelete.push(key);
+      continue;
+    }
+
+    const parsed = parseLocalSession(raw);
+    if (!parsed) {
+      keysToDelete.push(key);
+      continue;
+    }
+
+    const ageMs = now - parsed.savedAt;
+    if (!Number.isFinite(ageMs) || ageMs > SESSION_RETENTION_MS) {
+      keysToDelete.push(key);
+    }
+  }
+
+  if (keysToDelete.length === 0) {
+    return;
+  }
+
+  await Promise.all(
+    keysToDelete.map(async (key) => {
+      window.localStorage.removeItem(key);
+      try {
+        await clearSessionFromIndexedDb(key);
+      } catch (error) {
+        console.error('Failed to clear expired session from IndexedDB.', error);
+      }
+    }),
+  );
 };
 
 export interface TemplatesPanelProps {
@@ -113,6 +238,10 @@ export interface TemplatesPanelProps {
 
 export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   const editor = useEditorMaybe();
+  const tabOwnerTokenRef = useRef(createTabSessionId());
+  const tabSessionIdRef = useRef(getTabSessionId(tabOwnerTokenRef.current));
+  const scopedSessionKeyRef = useRef(buildLocalSessionKey(tabSessionIdRef.current));
+  const scopedSessionKey = scopedSessionKeyRef.current;
   const mjmlInputRef = useRef<HTMLInputElement | null>(null);
   const sessionInputRef = useRef<HTMLInputElement | null>(null);
   const uploadTemplateInputRef = useRef<HTMLInputElement | null>(null);
@@ -164,27 +293,27 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   }, []);
 
   const loadStoredSession = useCallback(async (): Promise<StoredSession | null> => {
-    const raw = window.localStorage.getItem(LOCAL_SESSION_KEY);
+    const raw = window.localStorage.getItem(scopedSessionKey);
     const parsed = parseLocalSession(raw);
     if (parsed) {
       return parsed;
     }
     if (raw && !parsed) {
       // Clear corrupted or incompatible payloads so they don't repeatedly prompt restore.
-      window.localStorage.removeItem(LOCAL_SESSION_KEY);
+      window.localStorage.removeItem(scopedSessionKey);
     }
     try {
-      const indexedDbRaw = await readSessionFromIndexedDb();
+      const indexedDbRaw = await readSessionFromIndexedDb(scopedSessionKey);
       const indexedDbParsed = parseLocalSession(indexedDbRaw);
       if (!indexedDbParsed && indexedDbRaw) {
-        await clearSessionFromIndexedDb();
+        await clearSessionFromIndexedDb(scopedSessionKey);
       }
       return indexedDbParsed;
     } catch (error) {
       console.error('Failed to load session from IndexedDB fallback.', error);
       return null;
     }
-  }, []);
+  }, [scopedSessionKey]);
 
   const saveSessionToLocal = useCallback(
     (
@@ -220,9 +349,9 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
         });
         let savedWithFallback = false;
         try {
-          window.localStorage.setItem(LOCAL_SESSION_KEY, serializedPayload);
+          window.localStorage.setItem(scopedSessionKey, serializedPayload);
           try {
-            await clearSessionFromIndexedDb();
+            await clearSessionFromIndexedDb(scopedSessionKey);
           } catch {
             // Ignore cleanup failures; localStorage already has the latest payload.
           }
@@ -230,8 +359,8 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
           if (!isQuotaExceededError(error)) {
             throw error;
           }
-          await writeSessionToIndexedDb(serializedPayload);
-          window.localStorage.removeItem(LOCAL_SESSION_KEY);
+          await writeSessionToIndexedDb(scopedSessionKey, serializedPayload);
+          window.localStorage.removeItem(scopedSessionKey);
           savedWithFallback = true;
         }
         setSavedFingerprint(mjml);
@@ -260,7 +389,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
         return false;
       });
     },
-    [editor, projectName, projectVersion, versionFingerprint],
+    [editor, projectName, projectVersion, scopedSessionKey, versionFingerprint],
   );
 
   const applyMjmlToEditor = useCallback(
@@ -362,6 +491,50 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   }, [editor]);
 
   useEffect(() => {
+    void purgeExpiredLocalSessions();
+  }, []);
+
+  useEffect(() => {
+    const tabSessionId = tabSessionIdRef.current;
+    const ownerToken = tabOwnerTokenRef.current;
+    const claimKey = `${TAB_SESSION_OWNER_PREFIX}:${tabSessionId}`;
+
+    const writeClaimHeartbeat = () => {
+      window.localStorage.setItem(
+        claimKey,
+        JSON.stringify({
+          ownerToken,
+          updatedAt: Date.now(),
+        }),
+      );
+    };
+
+    const releaseClaimOnUnload = () => {
+      const raw = window.localStorage.getItem(claimKey);
+      if (!raw) {
+        return;
+      }
+      try {
+        const parsed = JSON.parse(raw) as { ownerToken?: unknown };
+        if (parsed.ownerToken === ownerToken) {
+          window.localStorage.removeItem(claimKey);
+        }
+      } catch {
+        window.localStorage.removeItem(claimKey);
+      }
+    };
+
+    writeClaimHeartbeat();
+    const heartbeatId = window.setInterval(writeClaimHeartbeat, TAB_SESSION_HEARTBEAT_MS);
+    window.addEventListener('beforeunload', releaseClaimOnUnload);
+
+    return () => {
+      window.clearInterval(heartbeatId);
+      window.removeEventListener('beforeunload', releaseClaimOnUnload);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!editor || didTryRestoreRef.current) {
       return;
     }
@@ -456,7 +629,6 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     }
     if (currentFingerprint !== freshTemplateFingerprint) {
       setAutosaveEnabled(true);
-      setToastMessage('Autosave enabled after first edit.');
     }
   }, [autosaveEnabled, currentFingerprint, freshTemplateFingerprint]);
 
@@ -1033,13 +1205,13 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   }, []);
 
   const confirmEndSession = useCallback(() => {
-    window.localStorage.removeItem(LOCAL_SESSION_KEY);
-    void clearSessionFromIndexedDb();
+    window.localStorage.removeItem(scopedSessionKey);
+    void clearSessionFromIndexedDb(scopedSessionKey);
     setSavedFingerprint(null);
     setLastAutosaveAt(null);
     setSessionModal(null);
     window.location.reload();
-  }, []);
+  }, [scopedSessionKey]);
 
   const cancelProjectNameModal = useCallback(() => {
     setProjectNameModalAction(null);
@@ -1064,8 +1236,17 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     }
   }, [executeDownloadMjml, executeExportHtml, projectNameDraft, projectNameModalAction]);
 
-  const isUnsaved = currentFingerprint !== null && currentFingerprint !== savedFingerprint;
-  const sessionStatusLabel = isUnsaved ? 'Unsaved changes' : 'Autosaved';
+  const isUnsaved =
+    autosaveEnabled &&
+    currentFingerprint !== null &&
+    savedFingerprint !== null &&
+    currentFingerprint !== savedFingerprint;
+  const hasLocalSave = savedFingerprint !== null && lastAutosaveAt !== null;
+  const sessionStatusLabel = !hasLocalSave
+    ? 'No local save yet'
+    : isUnsaved
+      ? 'Unsaved changes'
+      : 'Autosaved';
   const lastAutosaveLabel = lastAutosaveAt
     ? new Date(lastAutosaveAt).toLocaleTimeString([], {
         hour: '2-digit',
@@ -1076,6 +1257,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   const sessionStatusClass = isUnsaved
     ? 'session-status-badge session-status-badge--unsaved'
     : 'session-status-badge session-status-badge--saved';
+  const shouldShowSessionStatus = hasLocalSave || isUnsaved;
   return (
     <>
       <div
@@ -1084,11 +1266,10 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
       >
         <div className="templates-actions">
           <div className="templates-action-group">
-            <h4 className="templates-group-title">Template Actions</h4>
             <div className="templates-action-row">
               <button
                 type="button"
-                className="templates-action-button gjs-btn"
+                className="templates-action-button templates-action-button--tall gjs-btn"
                 onClick={handleTriggerMjmlImport}
                 disabled={!editor}
                 title="Import an MJML template from your computer"
@@ -1097,32 +1278,12 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
               </button>
               <button
                 type="button"
-                className="templates-action-button gjs-btn"
+                className="templates-action-button templates-action-button--tall gjs-btn"
                 onClick={handleExportMjml}
                 disabled={!editor}
                 title="Download the current MJML markup"
               >
                 ⬇️ Download MJML
-              </button>
-            </div>
-            <div className="templates-action-row">
-              <button
-                type="button"
-                className="templates-action-button gjs-btn"
-                onClick={openTemplatesLibraryModal}
-                disabled={!editor}
-                title="Select one of the shared MJML templates"
-              >
-                🗂️ Select template
-              </button>
-              <button
-                type="button"
-                className="templates-action-button gjs-btn"
-                onClick={openUploadTemplateModal}
-                disabled={!editor}
-                title="Upload a new shared template to the library"
-              >
-                ⬆️ Upload template
               </button>
             </div>
             <button
@@ -1170,6 +1331,32 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
               </button>
             </div>
           </div>
+
+          <div className="templates-action-group templates-action-group--database">
+            <h4 className="templates-group-title">Database templates</h4>
+            <div className="templates-action-row">
+              <button
+                type="button"
+                className="templates-action-button templates-action-button--full gjs-btn"
+                onClick={openTemplatesLibraryModal}
+                disabled={!editor}
+                title="Select one of the shared MJML templates from the database"
+              >
+                🗂️ Select template from database
+              </button>
+            </div>
+            <div className="templates-action-row">
+              <button
+                type="button"
+                className="templates-action-button templates-action-button--full gjs-btn"
+                onClick={openUploadTemplateModal}
+                disabled={!editor}
+                title="Upload a new shared template to the database"
+              >
+                ⬆️ Upload template to database
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="templates-recents">
@@ -1203,15 +1390,17 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
           style={{ display: 'none' }}
         />
       </div>
-      <div className={sessionStatusClass}>
-        <div className="session-status-title">
-          <span className="session-status-dot" aria-hidden="true" />
-          {sessionStatusLabel}
+      {shouldShowSessionStatus ? (
+        <div className={sessionStatusClass}>
+          <div className="session-status-title">
+            <span className="session-status-dot" aria-hidden="true" />
+            {sessionStatusLabel}
+          </div>
+          <div className="session-status-meta">
+            {lastAutosaveLabel ? `Last autosave at ${lastAutosaveLabel}` : 'Last autosave: not yet'}
+          </div>
         </div>
-        <div className="session-status-meta">
-          {lastAutosaveLabel ? `Last autosave at ${lastAutosaveLabel}` : 'Last autosave: not yet'}
-        </div>
-      </div>
+      ) : null}
       {toastMessage ? (
         <div className="session-toast" role="status" aria-live="polite">
           {toastMessage}
