@@ -5,6 +5,8 @@ import { useEditor } from '@grapesjs/react';
 export default function Topbar() {
   const editor = useEditor();
   const [outlineActive, setOutlineActive] = useState(false);
+  const newSessionHref =
+    typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}` : '/';
 
   const devices = [
     { id: 'Desktop', name: 'Desktop', icon: '🖥️' },
@@ -80,7 +82,17 @@ export default function Topbar() {
   return (
     <div className="topbar gjs-one-bg gjs-two-color">
       <div className="topbar-section">
-        <h1 className="editor-title">MJML Email Editor</h1>
+        <h1 className="editor-title">
+          <a
+            className="editor-title-link"
+            href={newSessionHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Open editor in a new tab"
+          >
+            MJML Email Editor
+          </a>
+        </h1>
       </div>
 
       <div className="topbar-section topbar-center">

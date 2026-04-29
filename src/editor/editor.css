@@ -39,6 +39,16 @@
   text-transform: uppercase;
 }
 
+.editor-title-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.editor-title-link:hover,
+.editor-title-link:focus {
+  text-decoration: underline;
+}
+
 .device-buttons {
   display: flex;
   gap: 6px;
