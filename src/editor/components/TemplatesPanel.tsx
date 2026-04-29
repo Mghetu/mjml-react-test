@@ -14,7 +14,7 @@ import {
 const MAX_TEMPLATE_SIZE = 5 * 1024 * 1024; // 5MB
 const MAX_REMOTE_TEMPLATE_SIZE = 2 * 1024 * 1024; // 2MB (matches backend guardrail)
 const LOCAL_SESSION_KEY = 'mjml-editor-local-session-v1';
-const AUTOSAVE_INTERVAL_MS = 60 * 1000;
+const AUTOSAVE_IDLE_MS = 20 * 1000;
 const FINGERPRINT_DEBOUNCE_MS = 350;
 const SESSION_DB_NAME = 'mjml-editor-session-db';
 const SESSION_DB_STORE = 'sessions';
@@ -118,6 +118,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   const uploadTemplateInputRef = useRef<HTMLInputElement | null>(null);
   const didTryRestoreRef = useRef(false);
   const fingerprintDebounceRef = useRef<number | null>(null);
+  const autosaveTimeoutRef = useRef<number | null>(null);
   const [recentItems, setRecentItems] = useState<RecentItem[]>([]);
   const [isConverting, setIsConverting] = useState(false);
   const [htmlExportProfile, setHtmlExportProfile] = useState<HtmlExportProfile>('email-safe');
@@ -129,6 +130,8 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   const [projectName, setProjectName] = useState<string | null>(null);
   const [projectVersion, setProjectVersion] = useState(1);
   const [versionFingerprint, setVersionFingerprint] = useState<string | null>(null);
+  const [freshTemplateFingerprint, setFreshTemplateFingerprint] = useState<string | null>(null);
+  const [autosaveEnabled, setAutosaveEnabled] = useState(false);
   const [projectNameDraft, setProjectNameDraft] = useState('');
   const [projectNameModalAction, setProjectNameModalAction] = useState<ProjectActionKind>(null);
   const [libraryTemplatesModal, setLibraryTemplatesModal] = useState<LibraryTemplatesModalKind>(null);
@@ -332,6 +335,8 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
         setProjectName(stored.projectName);
         setProjectVersion(stored.projectVersion);
         setVersionFingerprint(stored.versionFingerprint);
+        setFreshTemplateFingerprint(null);
+        setAutosaveEnabled(true);
         updateRecents('Local Session (auto-restored)', 'mjml');
       } catch (error) {
         console.error('Failed to restore local session.', error);
@@ -352,6 +357,8 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     setProjectName(null);
     setProjectVersion(1);
     setVersionFingerprint(null);
+    setFreshTemplateFingerprint(initialFingerprint);
+    setAutosaveEnabled(false);
   }, [editor]);
 
   useEffect(() => {
@@ -417,18 +424,41 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   }, [editor]);
 
   useEffect(() => {
-    if (!editor) {
+    if (autosaveTimeoutRef.current) {
+      window.clearTimeout(autosaveTimeoutRef.current);
+      autosaveTimeoutRef.current = null;
+    }
+    if (!editor || !autosaveEnabled) {
+      return;
+    }
+    if (!currentFingerprint || currentFingerprint === savedFingerprint) {
       return;
     }
 
-    const intervalId = window.setInterval(() => {
+    autosaveTimeoutRef.current = window.setTimeout(() => {
       void saveSessionToLocal('auto');
-    }, AUTOSAVE_INTERVAL_MS);
+    }, AUTOSAVE_IDLE_MS);
 
     return () => {
-      window.clearInterval(intervalId);
+      if (autosaveTimeoutRef.current) {
+        window.clearTimeout(autosaveTimeoutRef.current);
+        autosaveTimeoutRef.current = null;
+      }
     };
-  }, [editor, saveSessionToLocal]);
+  }, [autosaveEnabled, currentFingerprint, editor, saveSessionToLocal, savedFingerprint]);
+
+  useEffect(() => {
+    if (autosaveEnabled) {
+      return;
+    }
+    if (!freshTemplateFingerprint || !currentFingerprint) {
+      return;
+    }
+    if (currentFingerprint !== freshTemplateFingerprint) {
+      setAutosaveEnabled(true);
+      setToastMessage('Autosave enabled after first edit.');
+    }
+  }, [autosaveEnabled, currentFingerprint, freshTemplateFingerprint]);
 
   useEffect(() => {
     if (!toastMessage) {
@@ -681,6 +711,8 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
           return;
         }
 
+        setFreshTemplateFingerprint(null);
+        setAutosaveEnabled(true);
         updateRecents(template.name, 'mjml');
         window.setTimeout(() => {
           void saveSessionToLocal('auto');
@@ -893,6 +925,8 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
             window.alert('The selected file does not contain a valid <mjml> root element.');
             return;
           }
+          setFreshTemplateFingerprint(null);
+          setAutosaveEnabled(true);
           updateRecents(file.name, 'mjml');
           // Persist imported content right away so refresh restores this exact session.
           window.setTimeout(() => {
