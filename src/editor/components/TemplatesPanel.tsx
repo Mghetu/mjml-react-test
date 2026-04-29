@@ -38,7 +38,7 @@ interface RecentItem {
   timestamp: number;
 }
 
-type SessionModalKind = 'restore' | 'end-session' | null;
+type SessionModalKind = 'end-session' | null;
 type ProjectActionKind = 'download-mjml' | 'export-html' | null;
 type LibraryTemplatesModalKind = 'select-template' | 'upload-template' | null;
 
@@ -126,7 +126,6 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   const [lastAutosaveAt, setLastAutosaveAt] = useState<number | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [sessionModal, setSessionModal] = useState<SessionModalKind>(null);
-  const [pendingStoredSession, setPendingStoredSession] = useState<StoredSession | null>(null);
   const [projectName, setProjectName] = useState<string | null>(null);
   const [projectVersion, setProjectVersion] = useState(1);
   const [versionFingerprint, setVersionFingerprint] = useState<string | null>(null);
@@ -355,25 +354,6 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     setVersionFingerprint(null);
   }, [editor]);
 
-  const restorePendingDraft = useCallback(() => {
-    if (!pendingStoredSession) {
-      setSessionModal(null);
-      return;
-    }
-
-    restoreStoredSession(pendingStoredSession);
-    setPendingStoredSession(null);
-    setSessionModal(null);
-  }, [pendingStoredSession, restoreStoredSession]);
-
-  const startFreshDraft = useCallback(() => {
-    window.localStorage.removeItem(LOCAL_SESSION_KEY);
-    void clearSessionFromIndexedDb();
-    setPendingStoredSession(null);
-    initializeFreshSessionState();
-    setSessionModal(null);
-  }, [initializeFreshSessionState]);
-
   useEffect(() => {
     if (!editor || didTryRestoreRef.current) {
       return;
@@ -383,13 +363,12 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     void (async () => {
       const stored = await loadStoredSession();
       if (stored) {
-        setPendingStoredSession(stored);
-        setSessionModal('restore');
+        restoreStoredSession(stored);
         return;
       }
       initializeFreshSessionState();
     })();
-  }, [editor, initializeFreshSessionState, loadStoredSession]);
+  }, [editor, initializeFreshSessionState, loadStoredSession, restoreStoredSession]);
 
   useEffect(() => {
     if (!editor) {
@@ -1063,17 +1042,6 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   const sessionStatusClass = isUnsaved
     ? 'session-status-badge session-status-badge--unsaved'
     : 'session-status-badge session-status-badge--saved';
-  const restoreDraftTimestampLabel = pendingStoredSession
-    ? new Date(pendingStoredSession.savedAt).toLocaleString([], {
-        year: 'numeric',
-        month: 'short',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      })
-    : null;
-
   return (
     <>
       <div
@@ -1218,40 +1186,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
       {sessionModal ? (
         <div className="session-modal-overlay" role="dialog" aria-modal="true">
           <div className="session-modal">
-            {sessionModal === 'restore' ? (
-              <>
-                <h4>Restore local draft?</h4>
-                <p>
-                  A previous draft was found on this device.
-                  <br />
-                  {restoreDraftTimestampLabel ? (
-                    <>
-                      Last draft saved at
-                      {' '}
-                      <strong>{restoreDraftTimestampLabel}</strong>.
-                    </>
-                  ) : null}
-                  <br />
-                  Do you want to continue it?
-                </p>
-                <div className="session-modal-actions">
-                  <button
-                    type="button"
-                    className="templates-action-button gjs-btn"
-                    onClick={startFreshDraft}
-                  >
-                    Start fresh
-                  </button>
-                  <button
-                    type="button"
-                    className="templates-action-button templates-action-button--primary gjs-btn"
-                    onClick={restorePendingDraft}
-                  >
-                    Restore draft
-                  </button>
-                </div>
-              </>
-            ) : (
+            {sessionModal === 'end-session' ? (
               <>
                 <h4>End current session?</h4>
                 <p>This will clear the local draft and reload the editor.</p>
@@ -1272,7 +1207,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
                   </button>
                 </div>
               </>
-            )}
+            ) : null}
           </div>
         </div>
       ) : null}
