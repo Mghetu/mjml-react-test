@@ -5,10 +5,16 @@ import { useEditorMaybe } from '@grapesjs/react';
 import type { Editor, Page } from 'grapesjs';
 import { sanitizeMjmlMarkup } from '../utils/mjml';
 import { convertCurrentMjmlToHtml } from '../utils/mjmlConversion';
+import {
+  parseLocalSession,
+  serializeLocalSession,
+  type StoredSession,
+} from '../utils/localSession';
 
 const MAX_TEMPLATE_SIZE = 5 * 1024 * 1024; // 5MB
 const LOCAL_SESSION_KEY = 'mjml-editor-local-session-v1';
 const AUTOSAVE_INTERVAL_MS = 60 * 1000;
+const FINGERPRINT_DEBOUNCE_MS = 350;
 
 type RecentKind = 'mjml' | 'json';
 
@@ -24,11 +30,6 @@ interface RecentItem {
   timestamp: number;
 }
 
-interface StoredSession {
-  mjml: string;
-  savedAt: number;
-}
-
 type SessionModalKind = 'restore' | 'end-session' | null;
 
 export interface TemplatesPanelProps {
@@ -40,6 +41,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   const mjmlInputRef = useRef<HTMLInputElement | null>(null);
   const sessionInputRef = useRef<HTMLInputElement | null>(null);
   const didTryRestoreRef = useRef(false);
+  const fingerprintDebounceRef = useRef<number | null>(null);
   const [recentItems, setRecentItems] = useState<RecentItem[]>([]);
   const [isConverting, setIsConverting] = useState(false);
   const [currentFingerprint, setCurrentFingerprint] = useState<string | null>(null);
@@ -65,27 +67,12 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
 
   const loadStoredSession = useCallback((): StoredSession | null => {
     const raw = window.localStorage.getItem(LOCAL_SESSION_KEY);
-    if (!raw) {
-      return null;
+    const parsed = parseLocalSession(raw);
+    if (raw && !parsed) {
+      // Clear corrupted or incompatible payloads so they don't repeatedly prompt restore.
+      window.localStorage.removeItem(LOCAL_SESSION_KEY);
     }
-
-    try {
-      const parsed = JSON.parse(raw) as { mjml?: unknown; savedAt?: unknown };
-      if (typeof parsed?.mjml !== 'string' || parsed.mjml.trim().length === 0) {
-        return null;
-      }
-
-      return {
-        mjml: parsed.mjml,
-        savedAt:
-          typeof parsed.savedAt === 'number' && Number.isFinite(parsed.savedAt)
-            ? parsed.savedAt
-            : Date.now(),
-      };
-    } catch (error) {
-      console.error('Failed to parse stored session from localStorage.', error);
-      return null;
-    }
+    return parsed;
   }, []);
 
   const saveSessionToLocal = useCallback(
@@ -101,13 +88,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
         }
         const savedAt = Date.now();
 
-        window.localStorage.setItem(
-          LOCAL_SESSION_KEY,
-          JSON.stringify({
-            mjml,
-            savedAt,
-          }),
-        );
+        window.localStorage.setItem(LOCAL_SESSION_KEY, serializeLocalSession(mjml, savedAt));
         setSavedFingerprint(mjml);
         setLastAutosaveAt(savedAt);
 
@@ -263,22 +244,35 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
       }
     };
 
+    const syncCurrentFingerprintDebounced = () => {
+      if (fingerprintDebounceRef.current) {
+        window.clearTimeout(fingerprintDebounceRef.current);
+      }
+      fingerprintDebounceRef.current = window.setTimeout(
+        syncCurrentFingerprint,
+        FINGERPRINT_DEBOUNCE_MS,
+      );
+    };
+
     syncCurrentFingerprint();
 
-    editor.on('component:add', syncCurrentFingerprint);
-    editor.on('component:remove', syncCurrentFingerprint);
-    editor.on('component:update', syncCurrentFingerprint);
-    editor.on('component:update:attributes', syncCurrentFingerprint);
-    editor.on('component:styleUpdate', syncCurrentFingerprint);
-    editor.on('change:changesCount', syncCurrentFingerprint);
+    editor.on('component:add', syncCurrentFingerprintDebounced);
+    editor.on('component:remove', syncCurrentFingerprintDebounced);
+    editor.on('component:update', syncCurrentFingerprintDebounced);
+    editor.on('component:update:attributes', syncCurrentFingerprintDebounced);
+    editor.on('component:styleUpdate', syncCurrentFingerprintDebounced);
+    editor.on('change:changesCount', syncCurrentFingerprintDebounced);
 
     return () => {
-      editor.off('component:add', syncCurrentFingerprint);
-      editor.off('component:remove', syncCurrentFingerprint);
-      editor.off('component:update', syncCurrentFingerprint);
-      editor.off('component:update:attributes', syncCurrentFingerprint);
-      editor.off('component:styleUpdate', syncCurrentFingerprint);
-      editor.off('change:changesCount', syncCurrentFingerprint);
+      if (fingerprintDebounceRef.current) {
+        window.clearTimeout(fingerprintDebounceRef.current);
+      }
+      editor.off('component:add', syncCurrentFingerprintDebounced);
+      editor.off('component:remove', syncCurrentFingerprintDebounced);
+      editor.off('component:update', syncCurrentFingerprintDebounced);
+      editor.off('component:update:attributes', syncCurrentFingerprintDebounced);
+      editor.off('component:styleUpdate', syncCurrentFingerprintDebounced);
+      editor.off('change:changesCount', syncCurrentFingerprintDebounced);
     };
   }, [editor]);
 
