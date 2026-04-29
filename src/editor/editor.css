@@ -441,6 +441,11 @@
   flex: 1;
 }
 
+/* Keep Recent section mounted, but hidden from UI for now. */
+.templates-recents {
+  display: none;
+}
+
 .templates-recents h4 {
   margin: 0;
   font-size: 0.75rem;
