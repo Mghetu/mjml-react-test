@@ -70,18 +70,6 @@ export default function App() {
     }
   };
 
-  const handleLogout = async () => {
-    setIsSubmitting(true);
-    try {
-      await authRequest('/api/auth/logout', { method: 'POST' });
-    } catch {
-      // No-op: we still clear local auth state.
-    } finally {
-      setAuthState('unauthenticated');
-      setIsSubmitting(false);
-    }
-  };
-
   const loginButtonLabel = useMemo(() => (isSubmitting ? 'Signing in...' : 'Sign in'), [isSubmitting]);
 
   if (authState === 'checking') {
@@ -121,12 +109,5 @@ export default function App() {
     );
   }
 
-  return (
-    <div className="app-shell">
-      <button className="logout-button" type="button" onClick={handleLogout} disabled={isSubmitting}>
-        Log out
-      </button>
-      <Editor />
-    </div>
-  );
+  return <Editor />;
 }

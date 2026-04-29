@@ -75,17 +75,3 @@
   font-size: 13px;
 }
 
-.logout-button {
-  position: fixed;
-  top: 10px;
-  right: 10px;
-  z-index: 30;
-  border: none;
-  border-radius: 6px;
-  background: rgba(17, 24, 39, 0.9);
-  color: #ffffff;
-  height: 32px;
-  padding: 0 12px;
-  font-size: 13px;
-  cursor: pointer;
-}
