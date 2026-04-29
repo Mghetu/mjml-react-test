@@ -492,6 +492,23 @@
   gap: 8px;
 }
 
+.templates-project-name-input {
+  width: 100%;
+  min-height: 36px;
+  margin-top: 10px;
+  border: 1px solid var(--gjs-main-dark-color);
+  border-radius: 3px;
+  background: var(--gjs-main-light-color);
+  color: var(--gjs-font-color-active);
+  padding: 8px 10px;
+  box-sizing: border-box;
+}
+
+.templates-project-name-input:focus {
+  outline: none;
+  border-color: var(--gjs-color-highlight);
+}
+
 .templates-recents-empty {
   margin: 0;
   color: var(--gjs-secondary-color);

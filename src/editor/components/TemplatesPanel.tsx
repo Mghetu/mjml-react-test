@@ -15,6 +15,8 @@ const MAX_TEMPLATE_SIZE = 5 * 1024 * 1024; // 5MB
 const LOCAL_SESSION_KEY = 'mjml-editor-local-session-v1';
 const AUTOSAVE_INTERVAL_MS = 60 * 1000;
 const FINGERPRINT_DEBOUNCE_MS = 350;
+const SESSION_DB_NAME = 'mjml-editor-session-db';
+const SESSION_DB_STORE = 'sessions';
 
 type RecentKind = 'mjml' | 'json';
 
@@ -36,6 +38,64 @@ interface RecentItem {
 }
 
 type SessionModalKind = 'restore' | 'end-session' | null;
+type ProjectActionKind = 'download-mjml' | 'export-html' | null;
+
+const isQuotaExceededError = (error: unknown) =>
+  error instanceof DOMException &&
+  (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED');
+
+const openSessionDb = () =>
+  new Promise<IDBDatabase>((resolve, reject) => {
+    if (!('indexedDB' in window)) {
+      reject(new Error('IndexedDB is not available in this browser.'));
+      return;
+    }
+    const request = window.indexedDB.open(SESSION_DB_NAME, 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(SESSION_DB_STORE)) {
+        db.createObjectStore(SESSION_DB_STORE);
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error ?? new Error('Failed to open IndexedDB.'));
+  });
+
+const writeSessionToIndexedDb = async (value: string) => {
+  const db = await openSessionDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(SESSION_DB_STORE, 'readwrite');
+    tx.objectStore(SESSION_DB_STORE).put(value, LOCAL_SESSION_KEY);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error ?? new Error('Failed to write session to IndexedDB.'));
+    tx.onabort = () => reject(tx.error ?? new Error('Failed to write session to IndexedDB.'));
+  });
+  db.close();
+};
+
+const readSessionFromIndexedDb = async () => {
+  const db = await openSessionDb();
+  const result = await new Promise<string | null>((resolve, reject) => {
+    const tx = db.transaction(SESSION_DB_STORE, 'readonly');
+    const request = tx.objectStore(SESSION_DB_STORE).get(LOCAL_SESSION_KEY);
+    request.onsuccess = () => resolve(typeof request.result === 'string' ? request.result : null);
+    request.onerror = () => reject(request.error ?? new Error('Failed to read session from IndexedDB.'));
+  });
+  db.close();
+  return result;
+};
+
+const clearSessionFromIndexedDb = async () => {
+  const db = await openSessionDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(SESSION_DB_STORE, 'readwrite');
+    tx.objectStore(SESSION_DB_STORE).delete(LOCAL_SESSION_KEY);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error ?? new Error('Failed to clear session from IndexedDB.'));
+    tx.onabort = () => reject(tx.error ?? new Error('Failed to clear session from IndexedDB.'));
+  });
+  db.close();
+};
 
 export interface TemplatesPanelProps {
   isVisible: boolean;
@@ -56,6 +116,11 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [sessionModal, setSessionModal] = useState<SessionModalKind>(null);
   const [pendingStoredSession, setPendingStoredSession] = useState<StoredSession | null>(null);
+  const [projectName, setProjectName] = useState<string | null>(null);
+  const [projectVersion, setProjectVersion] = useState(1);
+  const [versionFingerprint, setVersionFingerprint] = useState<string | null>(null);
+  const [projectNameDraft, setProjectNameDraft] = useState('');
+  const [projectNameModalAction, setProjectNameModalAction] = useState<ProjectActionKind>(null);
 
   const updateRecents = useCallback((name: string, kind: RecentKind) => {
     const timestamp = Date.now();
@@ -71,47 +136,104 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     });
   }, []);
 
-  const loadStoredSession = useCallback((): StoredSession | null => {
+  const loadStoredSession = useCallback(async (): Promise<StoredSession | null> => {
     const raw = window.localStorage.getItem(LOCAL_SESSION_KEY);
     const parsed = parseLocalSession(raw);
+    if (parsed) {
+      return parsed;
+    }
     if (raw && !parsed) {
       // Clear corrupted or incompatible payloads so they don't repeatedly prompt restore.
       window.localStorage.removeItem(LOCAL_SESSION_KEY);
     }
-    return parsed;
+    try {
+      const indexedDbRaw = await readSessionFromIndexedDb();
+      const indexedDbParsed = parseLocalSession(indexedDbRaw);
+      if (!indexedDbParsed && indexedDbRaw) {
+        await clearSessionFromIndexedDb();
+      }
+      return indexedDbParsed;
+    } catch (error) {
+      console.error('Failed to load session from IndexedDB fallback.', error);
+      return null;
+    }
   }, []);
 
   const saveSessionToLocal = useCallback(
-    (source: 'manual' | 'auto' = 'manual') => {
+    (
+      source: 'manual' | 'auto' = 'manual',
+      overrides?: {
+        projectName?: string | null;
+        projectVersion?: number;
+        versionFingerprint?: string | null;
+      },
+    ) => {
       if (!editor) {
-        return false;
+        return Promise.resolve(false);
       }
 
-      try {
+      const persist = async () => {
         const mjml = sanitizeMjmlMarkup(editor.getHtml());
-        if (!mjml.toLowerCase().startsWith('<mjml')) {
+        if (!mjml || mjml.trim().length === 0) {
           return false;
         }
         const savedAt = Date.now();
+        const nameToPersist = overrides?.projectName !== undefined ? overrides.projectName : projectName;
+        const versionToPersist =
+          overrides?.projectVersion !== undefined ? overrides.projectVersion : projectVersion;
+        const versionFingerprintToPersist =
+          overrides?.versionFingerprint !== undefined
+            ? overrides.versionFingerprint
+            : versionFingerprint;
 
-        window.localStorage.setItem(LOCAL_SESSION_KEY, serializeLocalSession(mjml, savedAt));
+        const serializedPayload = serializeLocalSession(mjml, savedAt, {
+          projectName: nameToPersist,
+          projectVersion: versionToPersist,
+          versionFingerprint: versionFingerprintToPersist,
+        });
+        let savedWithFallback = false;
+        try {
+          window.localStorage.setItem(LOCAL_SESSION_KEY, serializedPayload);
+          try {
+            await clearSessionFromIndexedDb();
+          } catch {
+            // Ignore cleanup failures; localStorage already has the latest payload.
+          }
+        } catch (error) {
+          if (!isQuotaExceededError(error)) {
+            throw error;
+          }
+          await writeSessionToIndexedDb(serializedPayload);
+          window.localStorage.removeItem(LOCAL_SESSION_KEY);
+          savedWithFallback = true;
+        }
         setSavedFingerprint(mjml);
         setLastAutosaveAt(savedAt);
 
         if (source === 'manual') {
-          setToastMessage('Session saved locally.');
+          setToastMessage(
+            savedWithFallback
+              ? 'Session saved locally (large draft mode).'
+              : 'Session saved locally.',
+          );
         }
 
         return true;
-      } catch (error) {
+      };
+
+      return persist().catch((error) => {
         console.error('Failed to save local session.', error);
-        if (source === 'manual') {
-          setToastMessage('Unable to save session locally.');
+        if (source === 'manual' || source === 'auto') {
+          if (isQuotaExceededError(error)) {
+            setToastMessage('Local storage limit reached. Save failed.');
+          } else if (source === 'manual') {
+            setToastMessage('Unable to save session locally.');
+          }
         }
         return false;
-      }
+      });
     },
-    [editor],
+    [editor, projectName, projectVersion, versionFingerprint],
   );
 
   const applyMjmlToEditor = useCallback(
@@ -183,6 +305,9 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
         setSavedFingerprint(normalized);
         setCurrentFingerprint(normalized);
         setLastAutosaveAt(stored.savedAt);
+        setProjectName(stored.projectName);
+        setProjectVersion(stored.projectVersion);
+        setVersionFingerprint(stored.versionFingerprint);
         updateRecents('Local Session (auto-restored)', 'mjml');
       } catch (error) {
         console.error('Failed to restore local session.', error);
@@ -200,6 +325,9 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     setCurrentFingerprint(initialFingerprint);
     setSavedFingerprint(null);
     setLastAutosaveAt(null);
+    setProjectName(null);
+    setProjectVersion(1);
+    setVersionFingerprint(null);
   }, [editor]);
 
   const restorePendingDraft = useCallback(() => {
@@ -215,6 +343,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
 
   const startFreshDraft = useCallback(() => {
     window.localStorage.removeItem(LOCAL_SESSION_KEY);
+    void clearSessionFromIndexedDb();
     setPendingStoredSession(null);
     initializeFreshSessionState();
     setSessionModal(null);
@@ -226,14 +355,15 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     }
 
     didTryRestoreRef.current = true;
-    const stored = loadStoredSession();
-    if (stored) {
-      setPendingStoredSession(stored);
-      setSessionModal('restore');
-      return;
-    }
-
-    initializeFreshSessionState();
+    void (async () => {
+      const stored = await loadStoredSession();
+      if (stored) {
+        setPendingStoredSession(stored);
+        setSessionModal('restore');
+        return;
+      }
+      initializeFreshSessionState();
+    })();
   }, [editor, initializeFreshSessionState, loadStoredSession]);
 
   useEffect(() => {
@@ -288,7 +418,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     }
 
     const intervalId = window.setInterval(() => {
-      saveSessionToLocal('auto');
+      void saveSessionToLocal('auto');
     }, AUTOSAVE_INTERVAL_MS);
 
     return () => {
@@ -323,6 +453,133 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
       URL.revokeObjectURL(url);
     }, 0);
   }, []);
+
+  const sanitizeProjectFileName = useCallback((value: string) => {
+    const trimmed = value.trim().toLowerCase();
+    if (!trimmed) {
+      return 'project';
+    }
+    const safe = trimmed
+      .replace(/[^a-z0-9-_ ]/gi, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^[-_]+|[-_]+$/g, '');
+    return safe || 'project';
+  }, []);
+
+  const getCurrentMjmlFingerprint = useCallback(() => {
+    if (!editor) {
+      return null;
+    }
+    return sanitizeMjmlMarkup(editor.getHtml());
+  }, [editor]);
+
+  const resolveProjectVersionForOutput = useCallback(() => {
+    const mjmlFingerprint = getCurrentMjmlFingerprint();
+    if (!mjmlFingerprint) {
+      return null;
+    }
+
+    if (!versionFingerprint) {
+      return {
+        nextVersion: projectVersion,
+        nextVersionFingerprint: mjmlFingerprint,
+        mjmlFingerprint,
+      };
+    }
+
+    if (mjmlFingerprint === versionFingerprint) {
+      return {
+        nextVersion: projectVersion,
+        nextVersionFingerprint: versionFingerprint,
+        mjmlFingerprint,
+      };
+    }
+
+    return {
+      nextVersion: projectVersion + 1,
+      nextVersionFingerprint: mjmlFingerprint,
+      mjmlFingerprint,
+    };
+  }, [getCurrentMjmlFingerprint, projectVersion, versionFingerprint]);
+
+  const executeDownloadMjml = useCallback(
+    (resolvedProjectName: string) => {
+      if (!editor) {
+        window.alert('Editor is not ready yet.');
+        return;
+      }
+
+      const versionState = resolveProjectVersionForOutput();
+      if (!versionState) {
+        window.alert('Unable to determine the current MJML content.');
+        return;
+      }
+
+      const { nextVersion, nextVersionFingerprint, mjmlFingerprint } = versionState;
+      const safeName = sanitizeProjectFileName(resolvedProjectName);
+      downloadFile(mjmlFingerprint, `${safeName}-v${nextVersion}.mjml`, 'application/vnd.mjml+xml');
+
+      setProjectName(resolvedProjectName);
+      setProjectVersion(nextVersion);
+      setVersionFingerprint(nextVersionFingerprint);
+      void saveSessionToLocal('auto', {
+        projectName: resolvedProjectName,
+        projectVersion: nextVersion,
+        versionFingerprint: nextVersionFingerprint,
+      });
+    },
+    [downloadFile, editor, resolveProjectVersionForOutput, sanitizeProjectFileName, saveSessionToLocal],
+  );
+
+  const executeExportHtml = useCallback(
+    async (resolvedProjectName: string) => {
+      if (!editor) {
+        window.alert('Editor is not ready yet.');
+        return;
+      }
+
+      const versionState = resolveProjectVersionForOutput();
+      if (!versionState) {
+        window.alert('Unable to determine the current MJML content.');
+        return;
+      }
+
+      const { nextVersion, nextVersionFingerprint } = versionState;
+      const safeName = sanitizeProjectFileName(resolvedProjectName);
+      const outputFilename = `${safeName}-v${nextVersion}.html`;
+
+      setIsConverting(true);
+      try {
+        await convertCurrentMjmlToHtml(editor, htmlExportProfile, outputFilename);
+        setProjectName(resolvedProjectName);
+        setProjectVersion(nextVersion);
+        setVersionFingerprint(nextVersionFingerprint);
+        void saveSessionToLocal('auto', {
+          projectName: resolvedProjectName,
+          projectVersion: nextVersion,
+          versionFingerprint: nextVersionFingerprint,
+        });
+      } finally {
+        setIsConverting(false);
+      }
+    },
+    [
+      editor,
+      htmlExportProfile,
+      resolveProjectVersionForOutput,
+      sanitizeProjectFileName,
+      saveSessionToLocal,
+    ],
+  );
+
+  const requestProjectNameForAction = useCallback(
+    (action: ProjectActionKind) => {
+      setProjectNameDraft(projectName ?? '');
+      setProjectNameModalAction(action);
+    },
+    [projectName],
+  );
 
   const handleTriggerMjmlImport = useCallback(() => {
     if (!editor) {
@@ -377,7 +634,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
           updateRecents(file.name, 'mjml');
           // Persist imported content right away so refresh restores this exact session.
           window.setTimeout(() => {
-            saveSessionToLocal('auto');
+            void saveSessionToLocal('auto');
           }, 0);
         } catch (error) {
           console.error(error);
@@ -445,10 +702,12 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
       window.alert('Editor is not ready yet.');
       return;
     }
-
-    const mjmlMarkup = editor.getHtml();
-    downloadFile(mjmlMarkup, 'template.mjml', 'application/vnd.mjml+xml');
-  }, [downloadFile, editor]);
+    if (!projectName) {
+      requestProjectNameForAction('download-mjml');
+      return;
+    }
+    executeDownloadMjml(projectName);
+  }, [editor, executeDownloadMjml, projectName, requestProjectNameForAction]);
 
   const handleConvertMjmlToHtml = useCallback(async () => {
     if (!editor) {
@@ -456,14 +715,13 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
       return;
     }
 
-    setIsConverting(true);
-
-    try {
-      await convertCurrentMjmlToHtml(editor, htmlExportProfile);
-    } finally {
-      setIsConverting(false);
+    if (!projectName) {
+      requestProjectNameForAction('export-html');
+      return;
     }
-  }, [editor, htmlExportProfile]);
+
+    await executeExportHtml(projectName);
+  }, [editor, executeExportHtml, projectName, requestProjectNameForAction]);
 
   const handleManualSave = useCallback(() => {
     if (!editor) {
@@ -471,7 +729,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
       return;
     }
 
-    saveSessionToLocal('manual');
+    void saveSessionToLocal('manual');
   }, [editor, saveSessionToLocal]);
 
   const handleEndSession = useCallback(() => {
@@ -480,11 +738,35 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
 
   const confirmEndSession = useCallback(() => {
     window.localStorage.removeItem(LOCAL_SESSION_KEY);
+    void clearSessionFromIndexedDb();
     setSavedFingerprint(null);
     setLastAutosaveAt(null);
     setSessionModal(null);
     window.location.reload();
   }, []);
+
+  const cancelProjectNameModal = useCallback(() => {
+    setProjectNameModalAction(null);
+    setProjectNameDraft(projectName ?? '');
+  }, [projectName]);
+
+  const confirmProjectNameModal = useCallback(async () => {
+    const trimmed = projectNameDraft.trim();
+    if (!trimmed) {
+      setToastMessage('Project name is required.');
+      return;
+    }
+
+    const action = projectNameModalAction;
+    setProjectNameModalAction(null);
+    if (action === 'download-mjml') {
+      executeDownloadMjml(trimmed);
+      return;
+    }
+    if (action === 'export-html') {
+      await executeExportHtml(trimmed);
+    }
+  }, [executeDownloadMjml, executeExportHtml, projectNameDraft, projectNameModalAction]);
 
   const isUnsaved = currentFingerprint !== null && currentFingerprint !== savedFingerprint;
   const sessionStatusLabel = isUnsaved ? 'Unsaved changes' : 'Autosaved';
@@ -688,6 +970,44 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      ) : null}
+      {projectNameModalAction ? (
+        <div className="session-modal-overlay" role="dialog" aria-modal="true">
+          <div className="session-modal">
+            <h4>Project name</h4>
+            <p>
+              {projectNameModalAction === 'download-mjml'
+                ? 'Set a project name for this MJML download.'
+                : 'Set a project name before HTML export.'}
+            </p>
+            <input
+              className="templates-project-name-input"
+              type="text"
+              value={projectNameDraft}
+              onChange={(event) => setProjectNameDraft(event.target.value)}
+              placeholder="example: spring-newsletter"
+              autoFocus
+            />
+            <div className="session-modal-actions">
+              <button
+                type="button"
+                className="templates-action-button gjs-btn"
+                onClick={cancelProjectNameModal}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="templates-action-button templates-action-button--primary gjs-btn"
+                onClick={() => {
+                  void confirmProjectNameModal();
+                }}
+              >
+                Continue
+              </button>
+            </div>
           </div>
         </div>
       ) : null}

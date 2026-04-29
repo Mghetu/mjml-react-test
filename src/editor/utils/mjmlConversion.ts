@@ -25,6 +25,7 @@ const formatError = (error: unknown) => {
 export async function convertCurrentMjmlToHtml(
   editor: Editor,
   profile: HtmlExportProfile = 'email-safe',
+  outputFilename = 'template.html',
 ) {
   const mjml = sanitizeMjmlMarkup(editor.getHtml());
 
@@ -69,15 +70,11 @@ export async function convertCurrentMjmlToHtml(
         return;
       }
 
-      alert(
-        'Running local fallback conversion (mjml-browser).\nImage compression via Tinify is skipped in this mode.'
-      );
-
       const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'template.html';
+      a.download = outputFilename;
       a.click();
       URL.revokeObjectURL(url);
       return;
@@ -105,7 +102,7 @@ export async function convertCurrentMjmlToHtml(
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'template.html';
+    a.download = outputFilename;
     a.click();
     URL.revokeObjectURL(url);
   } catch (err: unknown) {
