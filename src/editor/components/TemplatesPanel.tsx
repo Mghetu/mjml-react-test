@@ -24,6 +24,13 @@ interface RecentItem {
   timestamp: number;
 }
 
+interface StoredSession {
+  mjml: string;
+  savedAt: number;
+}
+
+type SessionModalKind = 'restore' | 'end-session' | null;
+
 export interface TemplatesPanelProps {
   isVisible: boolean;
 }
@@ -37,6 +44,10 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   const [isConverting, setIsConverting] = useState(false);
   const [currentFingerprint, setCurrentFingerprint] = useState<string | null>(null);
   const [savedFingerprint, setSavedFingerprint] = useState<string | null>(null);
+  const [lastAutosaveAt, setLastAutosaveAt] = useState<number | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [sessionModal, setSessionModal] = useState<SessionModalKind>(null);
+  const [pendingStoredSession, setPendingStoredSession] = useState<StoredSession | null>(null);
 
   const updateRecents = useCallback((name: string, kind: RecentKind) => {
     const timestamp = Date.now();
@@ -52,7 +63,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     });
   }, []);
 
-  const loadStoredSession = useCallback(() => {
+  const loadStoredSession = useCallback((): StoredSession | null => {
     const raw = window.localStorage.getItem(LOCAL_SESSION_KEY);
     if (!raw) {
       return null;
@@ -88,21 +99,27 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
         if (!mjml.toLowerCase().startsWith('<mjml')) {
           return false;
         }
+        const savedAt = Date.now();
 
         window.localStorage.setItem(
           LOCAL_SESSION_KEY,
           JSON.stringify({
             mjml,
-            savedAt: Date.now(),
+            savedAt,
           }),
         );
         setSavedFingerprint(mjml);
+        setLastAutosaveAt(savedAt);
+
+        if (source === 'manual') {
+          setToastMessage('Session saved locally.');
+        }
 
         return true;
       } catch (error) {
         console.error('Failed to save local session.', error);
         if (source === 'manual') {
-          window.alert('Unable to save the current session locally.');
+          setToastMessage('Unable to save session locally.');
         }
         return false;
       }
@@ -164,29 +181,57 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     [editor],
   );
 
-  const restoreSessionFromLocal = useCallback(() => {
+  const restoreStoredSession = useCallback(
+    (stored: StoredSession) => {
+      if (!editor) {
+        return;
+      }
+
+      try {
+        const applied = applyMjmlToEditor(stored.mjml);
+        if (!applied) {
+          return;
+        }
+        const normalized = sanitizeMjmlMarkup(stored.mjml);
+        setSavedFingerprint(normalized);
+        setCurrentFingerprint(normalized);
+        setLastAutosaveAt(stored.savedAt);
+        updateRecents('Local Session (auto-restored)', 'mjml');
+      } catch (error) {
+        console.error('Failed to restore local session.', error);
+      }
+    },
+    [applyMjmlToEditor, editor, updateRecents],
+  );
+
+  const initializeFreshSessionState = useCallback(() => {
     if (!editor) {
       return;
     }
 
-    const stored = loadStoredSession();
-    if (!stored) {
+    const initialFingerprint = sanitizeMjmlMarkup(editor.getHtml());
+    setCurrentFingerprint(initialFingerprint);
+    setSavedFingerprint(null);
+    setLastAutosaveAt(null);
+  }, [editor]);
+
+  const restorePendingDraft = useCallback(() => {
+    if (!pendingStoredSession) {
+      setSessionModal(null);
       return;
     }
 
-    try {
-      const applied = applyMjmlToEditor(stored.mjml);
-      if (!applied) {
-        return;
-      }
-      const normalized = sanitizeMjmlMarkup(stored.mjml);
-      setSavedFingerprint(normalized);
-      setCurrentFingerprint(normalized);
-      updateRecents('Local Session (auto-restored)', 'mjml');
-    } catch (error) {
-      console.error('Failed to restore local session.', error);
-    }
-  }, [applyMjmlToEditor, editor, loadStoredSession, updateRecents]);
+    restoreStoredSession(pendingStoredSession);
+    setPendingStoredSession(null);
+    setSessionModal(null);
+  }, [pendingStoredSession, restoreStoredSession]);
+
+  const startFreshDraft = useCallback(() => {
+    window.localStorage.removeItem(LOCAL_SESSION_KEY);
+    setPendingStoredSession(null);
+    initializeFreshSessionState();
+    setSessionModal(null);
+  }, [initializeFreshSessionState]);
 
   useEffect(() => {
     if (!editor || didTryRestoreRef.current) {
@@ -194,15 +239,15 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     }
 
     didTryRestoreRef.current = true;
-    restoreSessionFromLocal();
-
-    // If there is no stored session, mark current UI as unsaved baseline.
-    const initialFingerprint = sanitizeMjmlMarkup(editor.getHtml());
-    setCurrentFingerprint(initialFingerprint);
-    if (!window.localStorage.getItem(LOCAL_SESSION_KEY)) {
-      setSavedFingerprint(null);
+    const stored = loadStoredSession();
+    if (stored) {
+      setPendingStoredSession(stored);
+      setSessionModal('restore');
+      return;
     }
-  }, [editor, restoreSessionFromLocal]);
+
+    initializeFreshSessionState();
+  }, [editor, initializeFreshSessionState, loadStoredSession]);
 
   useEffect(() => {
     if (!editor) {
@@ -250,6 +295,20 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
       window.clearInterval(intervalId);
     };
   }, [editor, saveSessionToLocal]);
+
+  useEffect(() => {
+    if (!toastMessage) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setToastMessage(null);
+    }, 2200);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [toastMessage]);
 
   const downloadFile = useCallback((content: string, filename: string, mimeType: string) => {
     const blob = new Blob([content], { type: mimeType });
@@ -416,16 +475,39 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   }, [editor, saveSessionToLocal]);
 
   const handleEndSession = useCallback(() => {
+    setSessionModal('end-session');
+  }, []);
+
+  const confirmEndSession = useCallback(() => {
     window.localStorage.removeItem(LOCAL_SESSION_KEY);
     setSavedFingerprint(null);
+    setLastAutosaveAt(null);
+    setSessionModal(null);
     window.location.reload();
   }, []);
 
   const isUnsaved = currentFingerprint !== null && currentFingerprint !== savedFingerprint;
-  const sessionStatusLabel = isUnsaved ? 'Unsaved changes' : 'Session autosaved';
+  const sessionStatusLabel = isUnsaved ? 'Unsaved changes' : 'Autosaved';
+  const lastAutosaveLabel = lastAutosaveAt
+    ? new Date(lastAutosaveAt).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      })
+    : null;
   const sessionStatusClass = isUnsaved
     ? 'session-status-badge session-status-badge--unsaved'
     : 'session-status-badge session-status-badge--saved';
+  const restoreDraftTimestampLabel = pendingStoredSession
+    ? new Date(pendingStoredSession.savedAt).toLocaleString([], {
+        year: 'numeric',
+        month: 'short',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      })
+    : null;
 
   return (
     <>
@@ -433,96 +515,170 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
         className="templates-panel gjs-one-bg gjs-two-color"
         style={{ display: isVisible ? 'flex' : 'none' }}
       >
-      <div className="templates-actions">
-        <div className="templates-action-group">
-          <h4 className="templates-group-title">Template Actions</h4>
-          <div className="templates-action-row">
+        <div className="templates-actions">
+          <div className="templates-action-group">
+            <h4 className="templates-group-title">Template Actions</h4>
+            <div className="templates-action-row">
+              <button
+                type="button"
+                className="templates-action-button gjs-btn"
+                onClick={handleTriggerMjmlImport}
+                disabled={!editor}
+                title="Import an MJML template from your computer"
+              >
+                📂 Import MJML File
+              </button>
+              <button
+                type="button"
+                className="templates-action-button gjs-btn"
+                onClick={handleExportMjml}
+                disabled={!editor}
+                title="Download the current MJML markup"
+              >
+                ⬇️ Download MJML
+              </button>
+            </div>
             <button
               type="button"
-              className="templates-action-button gjs-btn"
-              onClick={handleTriggerMjmlImport}
-              disabled={!editor}
-              title="Import an MJML template from your computer"
+              className="templates-action-button templates-action-button--full templates-action-button--primary gjs-btn"
+              onClick={handleConvertMjmlToHtml}
+              disabled={!editor || isConverting}
+              title="Convert current MJML to HTML in the browser"
             >
-              📂 Import MJML File
-            </button>
-            <button
-              type="button"
-              className="templates-action-button gjs-btn"
-              onClick={handleExportMjml}
-              disabled={!editor}
-              title="Download the current MJML markup"
-            >
-              ⬇️ Download MJML
-            </button>
-          </div>
-          <button
-            type="button"
-            className="templates-action-button templates-action-button--full templates-action-button--primary gjs-btn"
-            onClick={handleConvertMjmlToHtml}
-            disabled={!editor || isConverting}
-            title="Convert current MJML to HTML in the browser"
-          >
-          {isConverting ? '⏳ Exporting…' : '🚀 Export HTML'}
-          </button>
-        </div>
-
-        <div className="templates-action-group templates-action-group--session">
-          <h4 className="templates-group-title">Session Management</h4>
-          <div className="templates-action-row">
-            <button
-              type="button"
-              className="templates-action-button gjs-btn"
-              onClick={handleManualSave}
-              disabled={!editor}
-              title="Save current session to local storage"
-            >
-              ✅ Save Session
-            </button>
-            <button
-              type="button"
-              className="templates-action-button gjs-btn"
-              onClick={handleEndSession}
-              title="Clear local session and restart"
-            >
-              🧹 End Session
+              {isConverting ? '⏳ Exporting…' : '🚀 Export HTML'}
             </button>
           </div>
+
+          <div className="templates-action-group templates-action-group--session">
+            <h4 className="templates-group-title">Session Management</h4>
+            <div className="templates-action-row">
+              <button
+                type="button"
+                className="templates-action-button gjs-btn"
+                onClick={handleManualSave}
+                disabled={!editor}
+                title="Save current session to local storage"
+              >
+                ✅ Save Session
+              </button>
+              <button
+                type="button"
+                className="templates-action-button gjs-btn"
+                onClick={handleEndSession}
+                title="Clear local session and restart"
+              >
+                🧹 End Session
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="templates-recents">
+          <h4>Recent</h4>
+          {recentItems.length > 0 ? (
+            <ul className="templates-recents-list">
+              {recentItems.map((item) => (
+                <li key={item.id} className="templates-recent-item">
+                  <span className="templates-recent-name">{item.name}</span>
+                  <span className="templates-recent-type">{RECENT_KIND_LABEL[item.kind]}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="templates-recents-empty">No recent files yet.</p>
+          )}
+        </div>
+
+        <input
+          ref={mjmlInputRef}
+          type="file"
+          accept=".mjml,text/xml,text/plain"
+          onChange={handleImportMjmlChange}
+          style={{ display: 'none' }}
+        />
+        <input
+          ref={sessionInputRef}
+          type="file"
+          accept=".json,application/json"
+          onChange={handleImportSessionChange}
+          style={{ display: 'none' }}
+        />
+      </div>
+      <div className={sessionStatusClass}>
+        <div className="session-status-title">
+          <span className="session-status-dot" aria-hidden="true" />
+          {sessionStatusLabel}
+        </div>
+        <div className="session-status-meta">
+          {lastAutosaveLabel ? `Last autosave at ${lastAutosaveLabel}` : 'Last autosave: not yet'}
         </div>
       </div>
-
-      <div className="templates-recents">
-        <h4>Recent</h4>
-        {recentItems.length > 0 ? (
-          <ul className="templates-recents-list">
-            {recentItems.map((item) => (
-              <li key={item.id} className="templates-recent-item">
-                <span className="templates-recent-name">{item.name}</span>
-                <span className="templates-recent-type">{RECENT_KIND_LABEL[item.kind]}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="templates-recents-empty">No recent files yet.</p>
-        )}
-      </div>
-
-      <input
-        ref={mjmlInputRef}
-        type="file"
-        accept=".mjml,text/xml,text/plain"
-        onChange={handleImportMjmlChange}
-        style={{ display: 'none' }}
-      />
-      <input
-        ref={sessionInputRef}
-        type="file"
-        accept=".json,application/json"
-        onChange={handleImportSessionChange}
-        style={{ display: 'none' }}
-      />
-      </div>
-      <div className={sessionStatusClass}>{sessionStatusLabel}</div>
+      {toastMessage ? (
+        <div className="session-toast" role="status" aria-live="polite">
+          {toastMessage}
+        </div>
+      ) : null}
+      {sessionModal ? (
+        <div className="session-modal-overlay" role="dialog" aria-modal="true">
+          <div className="session-modal">
+            {sessionModal === 'restore' ? (
+              <>
+                <h4>Restore local draft?</h4>
+                <p>
+                  A previous draft was found on this device.
+                  <br />
+                  {restoreDraftTimestampLabel ? (
+                    <>
+                      Last draft saved at
+                      {' '}
+                      <strong>{restoreDraftTimestampLabel}</strong>.
+                    </>
+                  ) : null}
+                  <br />
+                  Do you want to continue it?
+                </p>
+                <div className="session-modal-actions">
+                  <button
+                    type="button"
+                    className="templates-action-button gjs-btn"
+                    onClick={startFreshDraft}
+                  >
+                    Start fresh
+                  </button>
+                  <button
+                    type="button"
+                    className="templates-action-button templates-action-button--primary gjs-btn"
+                    onClick={restorePendingDraft}
+                  >
+                    Restore draft
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h4>End current session?</h4>
+                <p>This will clear the local draft and reload the editor.</p>
+                <div className="session-modal-actions">
+                  <button
+                    type="button"
+                    className="templates-action-button gjs-btn"
+                    onClick={() => setSessionModal(null)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="templates-action-button templates-action-button--primary gjs-btn"
+                    onClick={confirmEndSession}
+                  >
+                    End session
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
