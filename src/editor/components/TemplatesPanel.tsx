@@ -613,7 +613,10 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
       .replace(/^[-]+|[-]+$/g, '');
-    return normalized || `template-${Date.now()}`;
+    const base = normalized || 'template';
+    // Keep every upload as a new entry to avoid accidental overwrite
+    // when users reuse names similar to default templates.
+    return `${base}-${Date.now()}`;
   }, []);
 
   const loadRemoteTemplates = useCallback(async () => {

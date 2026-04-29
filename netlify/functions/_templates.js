@@ -5,48 +5,10 @@ const MANIFEST_KEY = 'manifest';
 const TEMPLATE_KEY_PREFIX = 'template:';
 const MAX_TEMPLATE_SIZE_BYTES = 2 * 1024 * 1024;
 
-const defaultTemplates = [
-  {
-    id: 'marketing-eminence-newsletter-ro',
-    name: 'Marketing Eminence Newsletter RO',
-    locale: 'ro-RO',
-    description: 'Template principal pentru newsletter-ul Marketing Eminence in romana.',
-    mjml: `<mjml>
-  <mj-body background-color="#f5f7fb">
-    <mj-section background-color="#ffffff" padding="24px">
-      <mj-column>
-        <mj-text font-size="26px" font-family="Arial, sans-serif" font-weight="700" color="#1f2a44">
-          Marketing Eminence
-        </mj-text>
-        <mj-text font-size="15px" color="#56637a">
-          Buna! Acesta este template-ul RO pentru newsletter.
-        </mj-text>
-      </mj-column>
-    </mj-section>
-  </mj-body>
-</mjml>`,
-  },
-  {
-    id: 'marketing-eminence-newsletter-en',
-    name: 'Marketing Eminence Newsletter EN',
-    locale: 'en-US',
-    description: 'Primary newsletter template for Marketing Eminence in English.',
-    mjml: `<mjml>
-  <mj-body background-color="#f5f7fb">
-    <mj-section background-color="#ffffff" padding="24px">
-      <mj-column>
-        <mj-text font-size="26px" font-family="Arial, sans-serif" font-weight="700" color="#1f2a44">
-          Marketing Eminence
-        </mj-text>
-        <mj-text font-size="15px" color="#56637a">
-          Hello! This is the EN newsletter template.
-        </mj-text>
-      </mj-column>
-    </mj-section>
-  </mj-body>
-</mjml>`,
-  },
-];
+const LEGACY_TEMPLATE_IDS = new Set([
+  'marketing-eminence-newsletter-ro',
+  'marketing-eminence-newsletter-en',
+]);
 
 const jsonHeaders = {
   'Content-Type': 'application/json; charset=utf-8',
@@ -70,17 +32,6 @@ export const readJsonBody = (event) => {
   } catch {
     return null;
   }
-};
-
-const toManifestEntry = (template) => {
-  const nowIso = new Date().toISOString();
-  return {
-    id: template.id,
-    name: template.name,
-    locale: template.locale || null,
-    description: template.description || '',
-    updatedAt: nowIso,
-  };
 };
 
 const isManifestEntry = (entry) =>
@@ -127,27 +78,35 @@ export const validateTemplatePayload = (payload) => {
 const getTemplatesStore = () => getStore(TEMPLATES_STORE);
 const templateKey = (id) => `${TEMPLATE_KEY_PREFIX}${id}`;
 
-const writeSeedTemplates = async (store) => {
-  const manifest = [];
-  for (const template of defaultTemplates) {
-    const entry = toManifestEntry(template);
-    manifest.push(entry);
-    await store.set(templateKey(template.id), template.mjml);
+const removeLegacyTemplates = async (store, manifest) => {
+  const filteredManifest = manifest.filter((entry) => !LEGACY_TEMPLATE_IDS.has(entry.id));
+  if (filteredManifest.length === manifest.length) {
+    return filteredManifest;
   }
-  await store.setJSON(MANIFEST_KEY, manifest);
-  return manifest;
+
+  await Promise.all(
+    manifest
+      .filter((entry) => LEGACY_TEMPLATE_IDS.has(entry.id))
+      .map((entry) => store.delete(templateKey(entry.id))),
+  );
+  await store.setJSON(MANIFEST_KEY, filteredManifest);
+  return filteredManifest;
 };
 
 export const getManifest = async () => {
   const store = getTemplatesStore();
   const manifest = await store.get(MANIFEST_KEY, { type: 'json' });
   if (Array.isArray(manifest) && manifest.every(isManifestEntry)) {
-    return manifest;
+    return removeLegacyTemplates(store, manifest);
   }
-  return writeSeedTemplates(store);
+  await store.setJSON(MANIFEST_KEY, []);
+  return [];
 };
 
 export const getTemplateById = async (id) => {
+  if (LEGACY_TEMPLATE_IDS.has(id)) {
+    return null;
+  }
   const store = getTemplatesStore();
   const mjml = await store.get(templateKey(id), { type: 'text' });
   if (typeof mjml !== 'string') {
