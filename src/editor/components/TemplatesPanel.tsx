@@ -115,6 +115,13 @@ interface RecentItem {
   timestamp: number;
 }
 
+interface AutosavedSessionItem {
+  key: string;
+  tabSessionId: string;
+  projectName: string | null;
+  savedAt: number;
+}
+
 type SessionModalKind = 'end-session' | null;
 type ProjectActionKind = 'download-mjml' | 'export-html' | null;
 type LibraryTemplatesModalKind = 'select-template' | 'upload-template' | null;
@@ -277,6 +284,8 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   const [uploadTemplateFileName, setUploadTemplateFileName] = useState<string | null>(null);
   const [uploadTemplateMjml, setUploadTemplateMjml] = useState<string | null>(null);
   const [isUploadingTemplate, setIsUploadingTemplate] = useState(false);
+  const [autosavedSessions, setAutosavedSessions] = useState<AutosavedSessionItem[]>([]);
+  const [activeAutosavedSessionKey, setActiveAutosavedSessionKey] = useState<string | null>(null);
 
   const updateRecents = useCallback((name: string, kind: RecentKind) => {
     const timestamp = Date.now();
@@ -314,6 +323,57 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
       return null;
     }
   }, [scopedSessionKey]);
+
+  const loadStoredSessionByKey = useCallback(async (sessionKey: string): Promise<StoredSession | null> => {
+    const raw = window.localStorage.getItem(sessionKey);
+    const parsed = parseLocalSession(raw);
+    if (parsed) {
+      return parsed;
+    }
+    if (raw && !parsed) {
+      window.localStorage.removeItem(sessionKey);
+    }
+    try {
+      const indexedDbRaw = await readSessionFromIndexedDb(sessionKey);
+      const indexedDbParsed = parseLocalSession(indexedDbRaw);
+      if (!indexedDbParsed && indexedDbRaw) {
+        await clearSessionFromIndexedDb(sessionKey);
+      }
+      return indexedDbParsed;
+    } catch (error) {
+      console.error('Failed to load session from IndexedDB fallback.', error);
+      return null;
+    }
+  }, []);
+
+  const refreshAutosavedSessions = useCallback(() => {
+    if (typeof window === 'undefined') {
+      setAutosavedSessions([]);
+      return;
+    }
+
+    const items: AutosavedSessionItem[] = [];
+    for (let i = 0; i < window.localStorage.length; i += 1) {
+      const key = window.localStorage.key(i);
+      if (!key || !key.startsWith(`${LOCAL_SESSION_KEY_PREFIX}:tab:`)) {
+        continue;
+      }
+      const raw = window.localStorage.getItem(key);
+      const parsed = parseLocalSession(raw);
+      if (!parsed) {
+        continue;
+      }
+      items.push({
+        key,
+        tabSessionId: key.slice(`${LOCAL_SESSION_KEY_PREFIX}:tab:`.length),
+        projectName: parsed.projectName,
+        savedAt: parsed.savedAt,
+      });
+    }
+
+    items.sort((a, b) => b.savedAt - a.savedAt);
+    setAutosavedSessions(items);
+  }, []);
 
   const saveSessionToLocal = useCallback(
     (
@@ -373,6 +433,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
               : 'Session saved locally.',
           );
         }
+        refreshAutosavedSessions();
 
         return true;
       };
@@ -389,7 +450,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
         return false;
       });
     },
-    [editor, projectName, projectVersion, scopedSessionKey, versionFingerprint],
+    [editor, projectName, projectVersion, refreshAutosavedSessions, scopedSessionKey, versionFingerprint],
   );
 
   const applyMjmlToEditor = useCallback(
@@ -493,6 +554,10 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   useEffect(() => {
     void purgeExpiredLocalSessions();
   }, []);
+
+  useEffect(() => {
+    refreshAutosavedSessions();
+  }, [refreshAutosavedSessions]);
 
   useEffect(() => {
     const tabSessionId = tabSessionIdRef.current;
@@ -1204,6 +1269,62 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     setSessionModal('end-session');
   }, []);
 
+  const handleRestoreAutosavedSession = useCallback(
+    async (sessionKey: string) => {
+      if (!editor) {
+        window.alert('Editor is not ready yet.');
+        return;
+      }
+
+      setActiveAutosavedSessionKey(sessionKey);
+      try {
+        const stored = await loadStoredSessionByKey(sessionKey);
+        if (!stored) {
+          setToastMessage('Selected autosaved session is no longer available.');
+          refreshAutosavedSessions();
+          return;
+        }
+
+        if (sessionKey !== scopedSessionKey) {
+          const restoredPayload = serializeLocalSession(stored.mjml, stored.savedAt, {
+            projectName: stored.projectName,
+            projectVersion: stored.projectVersion,
+            versionFingerprint: stored.versionFingerprint,
+          });
+          try {
+            window.localStorage.setItem(scopedSessionKey, restoredPayload);
+            try {
+              await clearSessionFromIndexedDb(scopedSessionKey);
+            } catch {
+              // Ignore cleanup failures when localStorage already has the payload.
+            }
+          } catch (error) {
+            if (!isQuotaExceededError(error)) {
+              throw error;
+            }
+            await writeSessionToIndexedDb(scopedSessionKey, restoredPayload);
+            window.localStorage.removeItem(scopedSessionKey);
+          }
+          window.localStorage.removeItem(sessionKey);
+          try {
+            await clearSessionFromIndexedDb(sessionKey);
+          } catch {
+            // Ignore cleanup failures for source key migration.
+          }
+        }
+
+        restoreStoredSession(stored);
+        setFreshTemplateFingerprint(null);
+        setAutosaveEnabled(true);
+        refreshAutosavedSessions();
+        setToastMessage('Autosaved session restored.');
+      } finally {
+        setActiveAutosavedSessionKey(null);
+      }
+    },
+    [editor, loadStoredSessionByKey, refreshAutosavedSessions, restoreStoredSession, scopedSessionKey],
+  );
+
   const confirmEndSession = useCallback(() => {
     window.localStorage.removeItem(scopedSessionKey);
     void clearSessionFromIndexedDb(scopedSessionKey);
@@ -1355,6 +1476,40 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
               >
                 ⬆️ Upload template to database
               </button>
+            </div>
+            <div className="templates-autosaved-sessions">
+              <h5 className="templates-subgroup-title">Autosaved Sessions</h5>
+              {autosavedSessions.length > 0 ? (
+                <ul className="templates-autosaved-list">
+                  {autosavedSessions.map((session) => {
+                    const isCurrentTab = session.key === scopedSessionKey;
+                    const displayName = session.projectName?.trim() || 'Untitled project';
+                    const savedAtLabel = new Date(session.savedAt).toLocaleString();
+                    const isRestoring = activeAutosavedSessionKey === session.key;
+                    return (
+                      <li key={session.key} className="templates-autosaved-item">
+                        <div className="templates-autosaved-meta">
+                          <strong>{displayName}</strong>
+                          <span>{savedAtLabel}</span>
+                          <span>{isCurrentTab ? 'Current tab session' : `Tab ${session.tabSessionId}`}</span>
+                        </div>
+                        <button
+                          type="button"
+                          className="templates-action-button gjs-btn"
+                          disabled={!editor || isRestoring}
+                          onClick={() => {
+                            void handleRestoreAutosavedSession(session.key);
+                          }}
+                        >
+                          {isRestoring ? 'Restoring...' : 'Restore'}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="templates-autosaved-empty">No autosaved sessions found in local storage.</p>
+              )}
             </div>
           </div>
         </div>
