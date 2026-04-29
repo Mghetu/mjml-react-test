@@ -1,4 +1,4 @@
-import { getStore } from '@netlify/blobs';
+import { connectLambda, getStore } from '@netlify/blobs';
 
 const TEMPLATES_STORE = 'newsletter-templates';
 const MANIFEST_KEY = 'manifest';
@@ -59,6 +59,10 @@ export const createJsonResponse = (statusCode, body) => ({
   headers: jsonHeaders,
   body: JSON.stringify(body),
 });
+
+export const ensureBlobsContext = (event) => {
+  connectLambda(event);
+};
 
 export const readJsonBody = (event) => {
   try {

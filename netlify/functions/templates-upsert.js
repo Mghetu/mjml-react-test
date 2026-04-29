@@ -1,4 +1,4 @@
-import { createJsonResponse, readJsonBody, upsertTemplate } from './_templates.js';
+import { createJsonResponse, ensureBlobsContext, readJsonBody, upsertTemplate } from './_templates.js';
 
 const getAdminTokenFromHeaders = (headers = {}) =>
   headers['x-admin-token'] || headers['X-Admin-Token'] || headers['x-templates-admin-token'];
@@ -28,6 +28,7 @@ export const handler = async (event) => {
   }
 
   try {
+    ensureBlobsContext(event);
     const result = await upsertTemplate(payload);
     if (!result.ok) {
       return createJsonResponse(400, { error: result.error });

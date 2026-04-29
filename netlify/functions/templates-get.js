@@ -1,4 +1,4 @@
-import { createJsonResponse, getManifest, getTemplateById } from './_templates.js';
+import { createJsonResponse, ensureBlobsContext, getManifest, getTemplateById } from './_templates.js';
 
 const parseTemplateId = (event) => {
   const pathParamsId = event?.pathParameters?.id;
@@ -28,6 +28,7 @@ export const handler = async (event) => {
   }
 
   try {
+    ensureBlobsContext(event);
     const [manifest, mjml] = await Promise.all([getManifest(), getTemplateById(id)]);
     if (!mjml) {
       return createJsonResponse(404, { error: 'Template not found.' });

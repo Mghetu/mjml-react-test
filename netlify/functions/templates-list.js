@@ -1,4 +1,4 @@
-import { createJsonResponse, getManifest } from './_templates.js';
+import { createJsonResponse, ensureBlobsContext, getManifest } from './_templates.js';
 
 export const handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
@@ -10,6 +10,7 @@ export const handler = async (event) => {
   }
 
   try {
+    ensureBlobsContext(event);
     const manifest = await getManifest();
     return createJsonResponse(200, { templates: manifest });
   } catch (error) {
