@@ -110,6 +110,60 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     [editor],
   );
 
+  const applyMjmlToEditor = useCallback(
+    (markup: string) => {
+      if (!editor) {
+        return false;
+      }
+
+      try {
+        const sanitizedMarkup = sanitizeMjmlMarkup(markup);
+        if (!sanitizedMarkup.toLowerCase().startsWith('<mjml')) {
+          return false;
+        }
+
+        const editorState = editor as unknown as {
+          __isMjmlImporting?: boolean;
+          DomComponents: {
+            getWrapper: () =>
+              | {
+                  components?: () => { reset?: (data?: unknown[]) => void } | undefined;
+                  set?: (key: string, value: unknown) => void;
+                }
+              | undefined;
+          };
+          Css: { clear: () => void };
+          UndoManager?: { stop?: () => void; start?: () => void; clear?: () => void };
+          trigger?: (event: string) => void;
+          setComponents: (data: string) => void;
+        };
+
+        editorState.__isMjmlImporting = true;
+        editorState.UndoManager?.stop?.();
+        editorState.UndoManager?.clear?.();
+
+        try {
+          const wrapper = editorState.DomComponents.getWrapper();
+          const wrapperComponents = wrapper?.components?.();
+          wrapperComponents?.reset?.([]);
+          wrapper?.set?.('content', '');
+          editorState.Css.clear();
+          editorState.setComponents(sanitizedMarkup);
+        } finally {
+          editorState.UndoManager?.start?.();
+          editorState.__isMjmlImporting = false;
+          editorState.trigger?.('mjml:imported');
+        }
+
+        return true;
+      } catch (error) {
+        console.error('Failed to apply MJML markup to editor.', error);
+        return false;
+      }
+    },
+    [editor],
+  );
+
   const restoreSessionFromLocal = useCallback(() => {
     if (!editor) {
       return;
@@ -121,18 +175,15 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     }
 
     try {
-      const sanitizedMarkup = sanitizeMjmlMarkup(stored.mjml);
-      if (!sanitizedMarkup.toLowerCase().startsWith('<mjml')) {
+      const applied = applyMjmlToEditor(stored.mjml);
+      if (!applied) {
         return;
       }
-
-      editor.setComponents(sanitizedMarkup);
-      (editor as unknown as { trigger?: (event: string) => void }).trigger?.('mjml:imported');
       updateRecents('Local Session (auto-restored)', 'mjml');
     } catch (error) {
       console.error('Failed to restore local session.', error);
     }
-  }, [editor, loadStoredSession, updateRecents]);
+  }, [applyMjmlToEditor, editor, loadStoredSession, updateRecents]);
 
   useEffect(() => {
     if (!editor || didTryRestoreRef.current) {
@@ -225,44 +276,12 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
         }
 
         try {
-          const sanitizedMarkup = sanitizeMjmlMarkup(result);
-          if (!sanitizedMarkup.toLowerCase().startsWith('<mjml')) {
+          const applied = applyMjmlToEditor(result);
+          if (!applied) {
             window.alert('The selected file does not contain a valid <mjml> root element.');
             return;
           }
-
-          const editorState = editor as unknown as {
-            __isMjmlImporting?: boolean;
-            DomComponents: {
-              getWrapper: () =>
-                | {
-                    components?: () => { reset?: (data?: unknown[]) => void } | undefined;
-                    set?: (key: string, value: unknown) => void;
-                  }
-                | undefined;
-            };
-            Css: { clear: () => void };
-            UndoManager?: { stop?: () => void; start?: () => void; clear?: () => void };
-            trigger?: (event: string) => void;
-          };
-
-          editorState.__isMjmlImporting = true;
-          editorState.UndoManager?.stop?.();
-          editorState.UndoManager?.clear?.();
-
-          try {
-            const wrapper = editorState.DomComponents.getWrapper();
-            const wrapperComponents = wrapper?.components?.();
-            wrapperComponents?.reset?.([]);
-            wrapper?.set?.('content', '');
-            editorState.Css.clear();
-            editor.setComponents(sanitizedMarkup);
-            updateRecents(file.name, 'mjml');
-          } finally {
-            editorState.UndoManager?.start?.();
-            editorState.__isMjmlImporting = false;
-            editorState.trigger?.('mjml:imported');
-          }
+          updateRecents(file.name, 'mjml');
         } catch (error) {
           console.error(error);
           window.alert('Failed to import the MJML template.');
@@ -271,7 +290,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
 
       reader.readAsText(file);
     },
-    [editor, updateRecents],
+    [applyMjmlToEditor, editor, updateRecents],
   );
 
   const handleImportSessionChange = useCallback(
