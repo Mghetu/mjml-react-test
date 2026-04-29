@@ -217,16 +217,45 @@
   gap: 8px;
 }
 
+.templates-action-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.templates-action-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.templates-action-group--session {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--gjs-main-dark-color);
+}
+
+.templates-group-title {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gjs-secondary-color);
+}
+
 .templates-action-button {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 8px 12px;
+  min-height: 52px;
+  padding: 10px 12px;
   border: 1px solid var(--gjs-main-dark-color);
   border-radius: 3px;
   background: var(--gjs-main-light-color);
   color: var(--gjs-font-color-active);
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   font-weight: 600;
   letter-spacing: 0.02em;
   text-transform: none;
@@ -234,6 +263,10 @@
   transition: background var(--gjs-animation-duration),
     border-color var(--gjs-animation-duration),
     color var(--gjs-animation-duration);
+}
+
+.templates-action-button--full {
+  width: 100%;
 }
 
 .templates-action-button:hover,
@@ -247,6 +280,20 @@
 .templates-action-button:disabled {
   cursor: not-allowed;
   opacity: 0.6;
+}
+
+.templates-action-button--primary {
+  background: linear-gradient(135deg, #5b3df5, #7c3aed);
+  border-color: #8b5cf6;
+  color: #ffffff;
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.45), 0 6px 16px rgba(76, 29, 149, 0.35);
+}
+
+.templates-action-button--primary:hover,
+.templates-action-button--primary:focus {
+  background: linear-gradient(135deg, #6d4fff, #8f46ff);
+  border-color: #a78bfa;
+  color: #ffffff;
 }
 
 .templates-recents {
@@ -295,6 +342,32 @@
   color: var(--gjs-secondary-color);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+.session-status-badge {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 40;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  pointer-events: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.session-status-badge--saved {
+  color: #e8fff0;
+  background: #1f7a47;
+  border: 1px solid #2ea25f;
+}
+
+.session-status-badge--unsaved {
+  color: #e5e7eb;
+  background: #374151;
+  border: 1px solid #4b5563;
 }
 
 .templates-recents-empty {

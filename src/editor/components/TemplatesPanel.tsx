@@ -35,6 +35,8 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   const didTryRestoreRef = useRef(false);
   const [recentItems, setRecentItems] = useState<RecentItem[]>([]);
   const [isConverting, setIsConverting] = useState(false);
+  const [currentFingerprint, setCurrentFingerprint] = useState<string | null>(null);
+  const [savedFingerprint, setSavedFingerprint] = useState<string | null>(null);
 
   const updateRecents = useCallback((name: string, kind: RecentKind) => {
     const timestamp = Date.now();
@@ -94,10 +96,8 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
             savedAt: Date.now(),
           }),
         );
+        setSavedFingerprint(mjml);
 
-        if (source === 'manual') {
-          window.alert('Current session saved locally.');
-        }
         return true;
       } catch (error) {
         console.error('Failed to save local session.', error);
@@ -179,6 +179,9 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
       if (!applied) {
         return;
       }
+      const normalized = sanitizeMjmlMarkup(stored.mjml);
+      setSavedFingerprint(normalized);
+      setCurrentFingerprint(normalized);
       updateRecents('Local Session (auto-restored)', 'mjml');
     } catch (error) {
       console.error('Failed to restore local session.', error);
@@ -192,7 +195,47 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
 
     didTryRestoreRef.current = true;
     restoreSessionFromLocal();
+
+    // If there is no stored session, mark current UI as unsaved baseline.
+    const initialFingerprint = sanitizeMjmlMarkup(editor.getHtml());
+    setCurrentFingerprint(initialFingerprint);
+    if (!window.localStorage.getItem(LOCAL_SESSION_KEY)) {
+      setSavedFingerprint(null);
+    }
   }, [editor, restoreSessionFromLocal]);
+
+  useEffect(() => {
+    if (!editor) {
+      return;
+    }
+
+    const syncCurrentFingerprint = () => {
+      try {
+        const normalized = sanitizeMjmlMarkup(editor.getHtml());
+        setCurrentFingerprint(normalized);
+      } catch (error) {
+        console.error('Failed to compute current session fingerprint.', error);
+      }
+    };
+
+    syncCurrentFingerprint();
+
+    editor.on('component:add', syncCurrentFingerprint);
+    editor.on('component:remove', syncCurrentFingerprint);
+    editor.on('component:update', syncCurrentFingerprint);
+    editor.on('component:update:attributes', syncCurrentFingerprint);
+    editor.on('component:styleUpdate', syncCurrentFingerprint);
+    editor.on('change:changesCount', syncCurrentFingerprint);
+
+    return () => {
+      editor.off('component:add', syncCurrentFingerprint);
+      editor.off('component:remove', syncCurrentFingerprint);
+      editor.off('component:update', syncCurrentFingerprint);
+      editor.off('component:update:attributes', syncCurrentFingerprint);
+      editor.off('component:styleUpdate', syncCurrentFingerprint);
+      editor.off('change:changesCount', syncCurrentFingerprint);
+    };
+  }, [editor]);
 
   useEffect(() => {
     if (!editor) {
@@ -229,15 +272,6 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     }
 
     mjmlInputRef.current?.click();
-  }, [editor]);
-
-  const handleTriggerSessionImport = useCallback(() => {
-    if (!editor) {
-      window.alert('Editor is not ready yet.');
-      return;
-    }
-
-    sessionInputRef.current?.click();
   }, [editor]);
 
   const handleImportMjmlChange = useCallback(
@@ -282,6 +316,10 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
             return;
           }
           updateRecents(file.name, 'mjml');
+          // Persist imported content right away so refresh restores this exact session.
+          window.setTimeout(() => {
+            saveSessionToLocal('auto');
+          }, 0);
         } catch (error) {
           console.error(error);
           window.alert('Failed to import the MJML template.');
@@ -290,7 +328,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
 
       reader.readAsText(file);
     },
-    [applyMjmlToEditor, editor, updateRecents],
+    [applyMjmlToEditor, editor, saveSessionToLocal, updateRecents],
   );
 
   const handleImportSessionChange = useCallback(
@@ -343,22 +381,6 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     [editor, updateRecents],
   );
 
-  const handleExportSession = useCallback(() => {
-    if (!editor) {
-      window.alert('Editor is not ready yet.');
-      return;
-    }
-
-    try {
-      const data = editor.getProjectData();
-      const serialized = JSON.stringify(data, null, 2);
-      downloadFile(serialized, 'project.json', 'application/json');
-    } catch (error) {
-      console.error(error);
-      window.alert('Failed to export the session.');
-    }
-  }, [downloadFile, editor]);
-
   const handleExportMjml = useCallback(() => {
     if (!editor) {
       window.alert('Editor is not ready yet.');
@@ -395,8 +417,15 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
 
   const handleEndSession = useCallback(() => {
     window.localStorage.removeItem(LOCAL_SESSION_KEY);
+    setSavedFingerprint(null);
     window.location.reload();
   }, []);
+
+  const isUnsaved = currentFingerprint !== null && currentFingerprint !== savedFingerprint;
+  const sessionStatusLabel = isUnsaved ? 'Unsaved changes' : 'Session autosaved';
+  const sessionStatusClass = isUnsaved
+    ? 'session-status-badge session-status-badge--unsaved'
+    : 'session-status-badge session-status-badge--saved';
 
   return (
     <div
@@ -404,68 +433,61 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
       style={{ display: isVisible ? 'flex' : 'none' }}
     >
       <div className="templates-actions">
-        <button
-          type="button"
-          className="templates-action-button gjs-btn"
-          onClick={handleTriggerMjmlImport}
-          disabled={!editor}
-          title="Import an MJML template from your computer"
-        >
-          Import MJML Template
-        </button>
-        <button
-          type="button"
-          className="templates-action-button gjs-btn"
-          onClick={handleTriggerSessionImport}
-          disabled={!editor}
-          title="Import a previously exported session JSON file"
-        >
-          Import Session (JSON)
-        </button>
-        <button
-          type="button"
-          className="templates-action-button gjs-btn"
-          onClick={handleExportSession}
-          disabled={!editor}
-          title="Download the current editor session as JSON"
-        >
-          Export Session (JSON)
-        </button>
-        <button
-          type="button"
-          className="templates-action-button gjs-btn"
-          onClick={handleExportMjml}
-          disabled={!editor}
-          title="Download the current MJML markup"
-        >
-          Export MJML
-        </button>
-        <button
-          type="button"
-          className="templates-action-button gjs-btn"
-          onClick={handleConvertMjmlToHtml}
-          disabled={!editor || isConverting}
-          title="Convert current MJML to HTML in the browser"
-        >
-          {isConverting ? 'Converting…' : 'Convert MJML to HTML'}
-        </button>
-        <button
-          type="button"
-          className="templates-action-button gjs-btn"
-          onClick={handleManualSave}
-          disabled={!editor}
-          title="Save current session to local storage"
-        >
-          Save Session
-        </button>
-        <button
-          type="button"
-          className="templates-action-button gjs-btn"
-          onClick={handleEndSession}
-          title="Clear local session and restart"
-        >
-          End Session
-        </button>
+        <div className="templates-action-group">
+          <h4 className="templates-group-title">Template Actions</h4>
+          <div className="templates-action-row">
+            <button
+              type="button"
+              className="templates-action-button gjs-btn"
+              onClick={handleTriggerMjmlImport}
+              disabled={!editor}
+              title="Import an MJML template from your computer"
+            >
+              📂 Import MJML File
+            </button>
+            <button
+              type="button"
+              className="templates-action-button gjs-btn"
+              onClick={handleExportMjml}
+              disabled={!editor}
+              title="Download the current MJML markup"
+            >
+              ⬇️ Download MJML
+            </button>
+          </div>
+          <button
+            type="button"
+            className="templates-action-button templates-action-button--full templates-action-button--primary gjs-btn"
+            onClick={handleConvertMjmlToHtml}
+            disabled={!editor || isConverting}
+            title="Convert current MJML to HTML in the browser"
+          >
+          {isConverting ? '⏳ Exporting…' : '🚀 Export HTML'}
+          </button>
+        </div>
+
+        <div className="templates-action-group templates-action-group--session">
+          <h4 className="templates-group-title">Session Management</h4>
+          <div className="templates-action-row">
+            <button
+              type="button"
+              className="templates-action-button gjs-btn"
+              onClick={handleManualSave}
+              disabled={!editor}
+              title="Save current session to local storage"
+            >
+              ✅ Save Session
+            </button>
+            <button
+              type="button"
+              className="templates-action-button gjs-btn"
+              onClick={handleEndSession}
+              title="Clear local session and restart"
+            >
+              🧹 End Session
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="templates-recents">
@@ -498,6 +520,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
         onChange={handleImportSessionChange}
         style={{ display: 'none' }}
       />
+      <div className={sessionStatusClass}>{sessionStatusLabel}</div>
     </div>
   );
 }
