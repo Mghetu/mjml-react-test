@@ -12,6 +12,7 @@ import {
 } from '../utils/localSession';
 
 const MAX_TEMPLATE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_REMOTE_TEMPLATE_SIZE = 2 * 1024 * 1024; // 2MB (matches backend guardrail)
 const LOCAL_SESSION_KEY = 'mjml-editor-local-session-v1';
 const AUTOSAVE_INTERVAL_MS = 60 * 1000;
 const FINGERPRINT_DEBOUNCE_MS = 350;
@@ -39,6 +40,15 @@ interface RecentItem {
 
 type SessionModalKind = 'restore' | 'end-session' | null;
 type ProjectActionKind = 'download-mjml' | 'export-html' | null;
+type LibraryTemplatesModalKind = 'select-template' | 'upload-template' | null;
+
+interface RemoteTemplate {
+  id: string;
+  name: string;
+  locale: string | null;
+  description: string;
+  updatedAt: string;
+}
 
 const isQuotaExceededError = (error: unknown) =>
   error instanceof DOMException &&
@@ -105,6 +115,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   const editor = useEditorMaybe();
   const mjmlInputRef = useRef<HTMLInputElement | null>(null);
   const sessionInputRef = useRef<HTMLInputElement | null>(null);
+  const uploadTemplateInputRef = useRef<HTMLInputElement | null>(null);
   const didTryRestoreRef = useRef(false);
   const fingerprintDebounceRef = useRef<number | null>(null);
   const [recentItems, setRecentItems] = useState<RecentItem[]>([]);
@@ -121,6 +132,19 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   const [versionFingerprint, setVersionFingerprint] = useState<string | null>(null);
   const [projectNameDraft, setProjectNameDraft] = useState('');
   const [projectNameModalAction, setProjectNameModalAction] = useState<ProjectActionKind>(null);
+  const [libraryTemplatesModal, setLibraryTemplatesModal] = useState<LibraryTemplatesModalKind>(null);
+  const [remoteTemplates, setRemoteTemplates] = useState<RemoteTemplate[]>([]);
+  const [isLoadingRemoteTemplates, setIsLoadingRemoteTemplates] = useState(false);
+  const [remoteTemplatesError, setRemoteTemplatesError] = useState<string | null>(null);
+  const [activeRemoteTemplateId, setActiveRemoteTemplateId] = useState<string | null>(null);
+  const [activeDeleteTemplateId, setActiveDeleteTemplateId] = useState<string | null>(null);
+  const [managementAdminToken, setManagementAdminToken] = useState('');
+  const [uploadTemplateName, setUploadTemplateName] = useState('');
+  const [uploadTemplateDescription, setUploadTemplateDescription] = useState('');
+  const [uploadTemplateAdminToken, setUploadTemplateAdminToken] = useState('');
+  const [uploadTemplateFileName, setUploadTemplateFileName] = useState<string | null>(null);
+  const [uploadTemplateMjml, setUploadTemplateMjml] = useState<string | null>(null);
+  const [isUploadingTemplate, setIsUploadingTemplate] = useState(false);
 
   const updateRecents = useCallback((name: string, kind: RecentKind) => {
     const timestamp = Date.now();
@@ -581,6 +605,250 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     [projectName],
   );
 
+  const buildTemplateSlug = useCallback((value: string) => {
+    const normalized = value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^[-]+|[-]+$/g, '');
+    return normalized || `template-${Date.now()}`;
+  }, []);
+
+  const loadRemoteTemplates = useCallback(async () => {
+    setIsLoadingRemoteTemplates(true);
+    setRemoteTemplatesError(null);
+    try {
+      const response = await fetch('/api/templates');
+      const payload = (await response.json().catch(() => null)) as
+        | { templates?: RemoteTemplate[]; error?: string }
+        | null;
+      if (!response.ok) {
+        setRemoteTemplatesError(payload?.error || 'Failed to load templates list.');
+        setRemoteTemplates([]);
+        return;
+      }
+      const templates = Array.isArray(payload?.templates) ? payload.templates : [];
+      setRemoteTemplates(templates);
+    } catch (error) {
+      console.error('Failed to fetch templates list.', error);
+      setRemoteTemplatesError('Could not reach templates endpoint.');
+      setRemoteTemplates([]);
+    } finally {
+      setIsLoadingRemoteTemplates(false);
+    }
+  }, []);
+
+  const openTemplatesLibraryModal = useCallback(() => {
+    if (!editor) {
+      window.alert('Editor is not ready yet.');
+      return;
+    }
+    setLibraryTemplatesModal('select-template');
+    void loadRemoteTemplates();
+  }, [editor, loadRemoteTemplates]);
+
+  const openUploadTemplateModal = useCallback(() => {
+    if (!editor) {
+      window.alert('Editor is not ready yet.');
+      return;
+    }
+    setUploadTemplateName('');
+    setUploadTemplateDescription('');
+    setUploadTemplateAdminToken('');
+    setUploadTemplateFileName(null);
+    setUploadTemplateMjml(null);
+    setLibraryTemplatesModal('upload-template');
+  }, [editor]);
+
+  const closeTemplatesLibraryModal = useCallback(() => {
+    setLibraryTemplatesModal(null);
+    setActiveRemoteTemplateId(null);
+    setActiveDeleteTemplateId(null);
+    setIsUploadingTemplate(false);
+  }, []);
+
+  const loadRemoteTemplateIntoEditor = useCallback(
+    async (template: RemoteTemplate) => {
+      if (!editor) {
+        window.alert('Editor is not ready yet.');
+        return;
+      }
+      setActiveRemoteTemplateId(template.id);
+      try {
+        const response = await fetch(`/api/templates/${encodeURIComponent(template.id)}`);
+        const payload = (await response.json().catch(() => null)) as
+          | { mjml?: string; error?: string }
+          | null;
+        if (!response.ok) {
+          window.alert(payload?.error || 'Failed to load selected template.');
+          return;
+        }
+        if (typeof payload?.mjml !== 'string' || !payload.mjml.trim()) {
+          window.alert('Selected template is empty or invalid.');
+          return;
+        }
+
+        const applied = applyMjmlToEditor(payload.mjml);
+        if (!applied) {
+          window.alert('Selected template does not contain a valid <mjml> root element.');
+          return;
+        }
+
+        updateRecents(template.name, 'mjml');
+        window.setTimeout(() => {
+          void saveSessionToLocal('auto');
+        }, 0);
+        setToastMessage(`Loaded template: ${template.name}`);
+        closeTemplatesLibraryModal();
+      } catch (error) {
+        console.error('Failed to load remote template.', error);
+        window.alert('Failed to load selected template.');
+      } finally {
+        setActiveRemoteTemplateId(null);
+      }
+    },
+    [applyMjmlToEditor, closeTemplatesLibraryModal, editor, saveSessionToLocal, updateRecents],
+  );
+
+  const handleUploadTemplateFileChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    if (!file) {
+      input.value = '';
+      return;
+    }
+    if (file.size > MAX_REMOTE_TEMPLATE_SIZE) {
+      window.alert('Template file is too large (maximum size is 2 MB).');
+      input.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => {
+      window.alert('Failed to read the selected MJML file.');
+      input.value = '';
+    };
+    reader.onload = () => {
+      input.value = '';
+      const result = reader.result;
+      if (typeof result !== 'string' || !result.trim()) {
+        window.alert('Unable to read MJML file contents.');
+        return;
+      }
+      if (!sanitizeMjmlMarkup(result).toLowerCase().startsWith('<mjml')) {
+        window.alert('The selected file does not contain a valid <mjml> root element.');
+        return;
+      }
+      setUploadTemplateFileName(file.name);
+      setUploadTemplateMjml(result);
+      if (!uploadTemplateName.trim()) {
+        const inferredName = file.name.replace(/\.[^.]+$/, '').trim();
+        setUploadTemplateName(inferredName || file.name);
+      }
+    };
+    reader.readAsText(file);
+  }, [uploadTemplateName]);
+
+  const submitTemplateUpload = useCallback(async () => {
+    const name = uploadTemplateName.trim();
+    const adminToken = uploadTemplateAdminToken.trim();
+    const mjml = uploadTemplateMjml;
+
+    if (!name) {
+      setToastMessage('Template name is required.');
+      return;
+    }
+    if (!adminToken) {
+      setToastMessage('Admin token is required.');
+      return;
+    }
+    if (!mjml) {
+      setToastMessage('Please select an MJML file first.');
+      return;
+    }
+
+    setIsUploadingTemplate(true);
+    try {
+      const response = await fetch('/api/templates/upsert', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-token': adminToken,
+        },
+        body: JSON.stringify({
+          id: buildTemplateSlug(name),
+          name,
+          description: uploadTemplateDescription.trim(),
+          mjml,
+        }),
+      });
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      if (!response.ok) {
+        window.alert(payload?.error || 'Failed to upload template.');
+        return;
+      }
+      setToastMessage(`Template uploaded: ${name}`);
+      setLibraryTemplatesModal('select-template');
+      setUploadTemplateMjml(null);
+      setUploadTemplateFileName(null);
+      await loadRemoteTemplates();
+    } catch (error) {
+      console.error('Failed to upload template.', error);
+      window.alert('Failed to upload template.');
+    } finally {
+      setIsUploadingTemplate(false);
+    }
+  }, [
+    buildTemplateSlug,
+    loadRemoteTemplates,
+    uploadTemplateAdminToken,
+    uploadTemplateDescription,
+    uploadTemplateMjml,
+    uploadTemplateName,
+  ]);
+
+  const deleteRemoteTemplate = useCallback(
+    async (template: RemoteTemplate) => {
+      const token = managementAdminToken.trim();
+      if (!token) {
+        setToastMessage('Admin token is required for delete.');
+        return;
+      }
+      const confirmed = window.confirm(`Delete template "${template.name}"? This cannot be undone.`);
+      if (!confirmed) {
+        return;
+      }
+
+      setActiveDeleteTemplateId(template.id);
+      try {
+        const response = await fetch('/api/templates/delete', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-token': token,
+          },
+          body: JSON.stringify({ id: template.id }),
+        });
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        if (!response.ok) {
+          window.alert(payload?.error || 'Failed to delete template.');
+          return;
+        }
+
+        setToastMessage(`Template deleted: ${template.name}`);
+        await loadRemoteTemplates();
+      } catch (error) {
+        console.error('Failed to delete template.', error);
+        window.alert('Failed to delete template.');
+      } finally {
+        setActiveDeleteTemplateId(null);
+      }
+    },
+    [loadRemoteTemplates, managementAdminToken],
+  );
+
   const handleTriggerMjmlImport = useCallback(() => {
     if (!editor) {
       window.alert('Editor is not ready yet.');
@@ -820,6 +1088,26 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
                 ⬇️ Download MJML
               </button>
             </div>
+            <div className="templates-action-row">
+              <button
+                type="button"
+                className="templates-action-button gjs-btn"
+                onClick={openTemplatesLibraryModal}
+                disabled={!editor}
+                title="Select one of the shared MJML templates"
+              >
+                🗂️ Select template
+              </button>
+              <button
+                type="button"
+                className="templates-action-button gjs-btn"
+                onClick={openUploadTemplateModal}
+                disabled={!editor}
+                title="Upload a new shared template to the library"
+              >
+                ⬆️ Upload template
+              </button>
+            </div>
             <button
               type="button"
               className="templates-action-button templates-action-button--full templates-action-button--primary gjs-btn"
@@ -970,6 +1258,174 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      ) : null}
+      {libraryTemplatesModal === 'select-template' ? (
+        <div className="session-modal-overlay" role="dialog" aria-modal="true">
+          <div className="session-modal templates-library-modal">
+            <h4>Select template</h4>
+            <p>Choose a shared MJML template to load into the editor.</p>
+            <label className="templates-upload-field">
+              <span>Admin token (for delete actions)</span>
+              <input
+                className="templates-project-name-input"
+                type="password"
+                value={managementAdminToken}
+                onChange={(event) => setManagementAdminToken(event.target.value)}
+                placeholder="APP_ACCESS_PASSWORD"
+              />
+            </label>
+            {isLoadingRemoteTemplates ? (
+              <p className="templates-library-state">Loading templates...</p>
+            ) : null}
+            {remoteTemplatesError ? (
+              <p className="templates-library-state templates-library-state--error">{remoteTemplatesError}</p>
+            ) : null}
+            {!isLoadingRemoteTemplates && !remoteTemplatesError ? (
+              remoteTemplates.length > 0 ? (
+                <ul className="templates-library-list">
+                  {remoteTemplates.map((template) => {
+                    const updatedAtLabel = template.updatedAt
+                      ? new Date(template.updatedAt).toLocaleDateString()
+                      : null;
+                    return (
+                      <li key={template.id} className="templates-library-item">
+                        <div className="templates-library-item-header">
+                          <strong>{template.name}</strong>
+                          {template.locale ? <span>{template.locale}</span> : null}
+                        </div>
+                        {template.description ? (
+                          <p className="templates-library-item-description">{template.description}</p>
+                        ) : null}
+                        <div className="templates-library-item-footer">
+                          <span>{updatedAtLabel ? `Updated ${updatedAtLabel}` : ' '}</span>
+                          <div className="templates-library-item-actions">
+                            <button
+                              type="button"
+                              className="templates-action-button gjs-btn"
+                              disabled={activeRemoteTemplateId === template.id}
+                              onClick={() => {
+                                void loadRemoteTemplateIntoEditor(template);
+                              }}
+                            >
+                              {activeRemoteTemplateId === template.id ? 'Loading...' : 'Use template'}
+                            </button>
+                            <button
+                              type="button"
+                              className="templates-action-button templates-action-button--danger gjs-btn"
+                              disabled={activeDeleteTemplateId === template.id}
+                              onClick={() => {
+                                void deleteRemoteTemplate(template);
+                              }}
+                            >
+                              {activeDeleteTemplateId === template.id ? 'Deleting...' : 'Delete'}
+                            </button>
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="templates-library-state">No templates are available yet.</p>
+              )
+            ) : null}
+            <div className="session-modal-actions">
+              <button
+                type="button"
+                className="templates-action-button gjs-btn"
+                onClick={closeTemplatesLibraryModal}
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                className="templates-action-button templates-action-button--primary gjs-btn"
+                onClick={() => {
+                  void loadRemoteTemplates();
+                }}
+                disabled={isLoadingRemoteTemplates}
+              >
+                Refresh list
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {libraryTemplatesModal === 'upload-template' ? (
+        <div className="session-modal-overlay" role="dialog" aria-modal="true">
+          <div className="session-modal templates-upload-modal">
+            <h4>Upload template</h4>
+            <p>Add a new MJML template to the shared library.</p>
+            <label className="templates-upload-field">
+              <span>Template name</span>
+              <input
+                className="templates-project-name-input"
+                type="text"
+                value={uploadTemplateName}
+                onChange={(event) => setUploadTemplateName(event.target.value)}
+                placeholder="ex: Marketing Eminence Newsletter RO"
+                autoFocus
+              />
+            </label>
+            <label className="templates-upload-field">
+              <span>Description (optional)</span>
+              <input
+                className="templates-project-name-input"
+                type="text"
+                value={uploadTemplateDescription}
+                onChange={(event) => setUploadTemplateDescription(event.target.value)}
+                placeholder="Short description for this template"
+              />
+            </label>
+            <label className="templates-upload-field">
+              <span>Admin token</span>
+              <input
+                className="templates-project-name-input"
+                type="password"
+                value={uploadTemplateAdminToken}
+                onChange={(event) => setUploadTemplateAdminToken(event.target.value)}
+                placeholder="APP_ACCESS_PASSWORD"
+              />
+            </label>
+            <div className="templates-upload-file-row">
+              <button
+                type="button"
+                className="templates-action-button gjs-btn"
+                onClick={() => uploadTemplateInputRef.current?.click()}
+              >
+                📎 Choose MJML file
+              </button>
+              <span>{uploadTemplateFileName || 'No file selected'}</span>
+            </div>
+            <div className="session-modal-actions">
+              <button
+                type="button"
+                className="templates-action-button gjs-btn"
+                onClick={closeTemplatesLibraryModal}
+                disabled={isUploadingTemplate}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="templates-action-button templates-action-button--primary gjs-btn"
+                onClick={() => {
+                  void submitTemplateUpload();
+                }}
+                disabled={isUploadingTemplate}
+              >
+                {isUploadingTemplate ? 'Uploading...' : 'Upload template'}
+              </button>
+            </div>
+            <input
+              ref={uploadTemplateInputRef}
+              type="file"
+              accept=".mjml,text/xml,text/plain"
+              onChange={handleUploadTemplateFileChange}
+              style={{ display: 'none' }}
+            />
           </div>
         </div>
       ) : null}

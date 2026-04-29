@@ -31,3 +31,27 @@
   to = "/.netlify/functions/auth-logout"
   status = 200
   force = true
+
+[[redirects]]
+  from = "/api/templates"
+  to = "/.netlify/functions/templates-list"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/templates/upsert"
+  to = "/.netlify/functions/templates-upsert"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/templates/delete"
+  to = "/.netlify/functions/templates-delete"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/templates/:id"
+  to = "/.netlify/functions/templates-get/:id"
+  status = 200
+  force = true

@@ -49,6 +49,29 @@ The HTML export endpoint is implemented as a Netlify Function at `/api/convert-m
    ```
 4. For deployment, connect the repo in Netlify. Build settings are defined in `netlify.toml`.
 
+### Shared MJML templates (Netlify Blobs)
+
+The editor now includes a `Select templates` action that loads shared templates for all users.
+
+- `GET /api/templates` returns the templates manifest.
+- `GET /api/templates/:id` returns template MJML content.
+- `POST /api/templates/upsert` creates or updates a template (admin token required).
+- `POST /api/templates/delete` deletes a template (admin token required).
+
+Example update request:
+
+```bash
+curl -X POST "https://<your-site>.netlify.app/api/templates/upsert" \
+  -H "Content-Type: application/json" \
+  -H "x-admin-token: <APP_ACCESS_PASSWORD>" \
+  -d '{
+    "id": "marketing-eminence-newsletter-ro",
+    "name": "Marketing Eminence Newsletter RO",
+    "description": "Romanian monthly marketing newsletter",
+    "mjml": "<mjml><mj-body><mj-section><mj-column><mj-text>Hello</mj-text></mj-column></mj-section></mj-body></mjml>"
+  }'
+```
+
 ## Development Notes
 - The GrapesJS storage manager is disabled; designs persist only for the active session. Configure `storageManager` in `src/editor/Editor.tsx` to enable persistence.
 - Blocks, traits, and styles are rendered via providers from `@grapesjs/react`. Customize these components to extend the editor experience.
