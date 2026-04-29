@@ -296,6 +296,46 @@
   color: #ffffff;
 }
 
+.templates-profile-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.templates-profile-field span {
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--gjs-secondary-color);
+}
+
+.templates-profile-select {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid var(--gjs-main-dark-color);
+  border-radius: 3px;
+  background: #2f3340;
+  color: var(--gjs-font-color-active);
+  font-size: 0.8rem;
+  padding: 6px 8px;
+}
+
+.templates-profile-select option {
+  background: #ffffff;
+  color: #111111;
+}
+
+.templates-profile-select option:checked {
+  background: #2d6cca;
+  color: #ffffff;
+}
+
+.templates-profile-select:focus {
+  outline: none;
+  border-color: var(--gjs-color-highlight);
+}
+
 .templates-recents {
   display: flex;
   flex-direction: column;

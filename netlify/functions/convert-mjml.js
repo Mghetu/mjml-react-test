@@ -22,6 +22,33 @@ const jsonHeaders = {
   'Content-Type': 'application/json; charset=utf-8',
 };
 
+const EXPORT_PROFILES = {
+  'email-safe': {
+    optimizeRemoteImages: false,
+    mjmlOptions: {
+      validationLevel: 'strict',
+      minify: true,
+      beautify: false,
+      keepComments: false,
+    },
+  },
+  aggressive: {
+    optimizeRemoteImages: true,
+    mjmlOptions: {
+      validationLevel: 'strict',
+      minify: true,
+      beautify: false,
+      keepComments: false,
+      minifyOptions: {
+        collapseWhitespace: true,
+        removeComments: true,
+        removeEmptyAttributes: true,
+        minifyCSS: true,
+      },
+    },
+  },
+};
+
 const createResponse = (statusCode, body) => ({
   statusCode,
   headers: jsonHeaders,
@@ -147,12 +174,13 @@ export const handler = async (event) => {
   }
 
   const apiKey = process.env.TINIFY_API_KEY;
-  if (!apiKey) {
-    return createResponse(500, {
-      error: 'Server is missing TINIFY_API_KEY.',
-    });
+  const tinifyEnabled = Boolean(apiKey);
+  const warnings = [];
+  if (tinifyEnabled) {
+    tinify.key = apiKey;
+  } else {
+    warnings.push('Tinify optimization skipped: missing TINIFY_API_KEY.');
   }
-  tinify.key = apiKey;
 
   let requestPayload;
   try {
@@ -166,14 +194,25 @@ export const handler = async (event) => {
     return createResponse(400, { errors: ['MJML payload is required.'] });
   }
 
+  const requestedProfile =
+    typeof requestPayload?.profile === 'string'
+      ? requestPayload.profile
+      : 'email-safe';
+  const hasRequestedProfile = Object.prototype.hasOwnProperty.call(
+    EXPORT_PROFILES,
+    requestedProfile,
+  );
+  const profileKey = hasRequestedProfile ? requestedProfile : 'email-safe';
+  const activeProfile = EXPORT_PROFILES[profileKey];
+
   let optimizedMjml = mjml;
-  try {
-    optimizedMjml = await optimizeInlineImagesInMjml(optimizedMjml);
-  } catch (error) {
-    console.error('Failed to optimize inline uploaded images:', error);
-    return createResponse(502, {
-      error: 'Image optimization failed for uploaded image assets.',
-    });
+  if (tinifyEnabled) {
+    try {
+      optimizedMjml = await optimizeInlineImagesInMjml(optimizedMjml);
+    } catch (error) {
+      console.error('Failed to optimize inline uploaded images. Continuing without optimization.', error);
+      warnings.push('Inline image optimization failed. Export continued with original images.');
+    }
   }
 
   const queryString =
@@ -186,26 +225,22 @@ export const handler = async (event) => {
             .join('&')
         : '';
   const query = new URLSearchParams(queryString);
-  if (query.get('optimizeRemoteImages') === '1') {
+  const forceOptimizeRemoteImages = query.get('optimizeRemoteImages') === '1';
+  if (tinifyEnabled && (activeProfile.optimizeRemoteImages || forceOptimizeRemoteImages)) {
     try {
       optimizedMjml = await optimizeHttpImagesInMjml(optimizedMjml);
     } catch (error) {
-      console.error('Failed to optimize remote image URLs:', error);
-      return createResponse(502, {
-        error: 'Image optimization failed for remote image URLs.',
-      });
+      console.error('Failed to optimize remote image URLs. Continuing without optimization.', error);
+      warnings.push('Remote image optimization failed. Export continued with original image URLs.');
     }
+  } else if (!tinifyEnabled && (activeProfile.optimizeRemoteImages || forceOptimizeRemoteImages)) {
+    warnings.push('Remote image optimization skipped because Tinify is unavailable.');
   }
 
   let result;
   try {
     result = await Promise.resolve(
-      mjml2html(optimizedMjml, {
-        validationLevel: 'strict',
-        minify: true,
-        beautify: false,
-        keepComments: false,
-      }),
+      mjml2html(optimizedMjml, activeProfile.mjmlOptions),
     );
   } catch (error) {
     console.error('MJML conversion runtime error:', error);
@@ -237,5 +272,7 @@ export const handler = async (event) => {
   return createResponse(200, {
     html: htmlOutput,
     optimizedMjml,
+    profile: profileKey,
+    warnings,
   });
 };

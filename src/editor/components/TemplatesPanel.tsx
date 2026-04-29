@@ -4,7 +4,7 @@ import type { ChangeEvent } from 'react';
 import { useEditorMaybe } from '@grapesjs/react';
 import type { Editor, Page } from 'grapesjs';
 import { sanitizeMjmlMarkup } from '../utils/mjml';
-import { convertCurrentMjmlToHtml } from '../utils/mjmlConversion';
+import { convertCurrentMjmlToHtml, type HtmlExportProfile } from '../utils/mjmlConversion';
 import {
   parseLocalSession,
   serializeLocalSession,
@@ -21,6 +21,11 @@ type RecentKind = 'mjml' | 'json';
 const RECENT_KIND_LABEL: Record<RecentKind, string> = {
   mjml: 'MJML Template',
   json: 'Session JSON',
+};
+
+const HTML_EXPORT_PROFILE_LABEL: Record<HtmlExportProfile, string> = {
+  'email-safe': 'Email-safe (recommended)',
+  aggressive: 'Aggressive minify',
 };
 
 interface RecentItem {
@@ -44,6 +49,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   const fingerprintDebounceRef = useRef<number | null>(null);
   const [recentItems, setRecentItems] = useState<RecentItem[]>([]);
   const [isConverting, setIsConverting] = useState(false);
+  const [htmlExportProfile, setHtmlExportProfile] = useState<HtmlExportProfile>('email-safe');
   const [currentFingerprint, setCurrentFingerprint] = useState<string | null>(null);
   const [savedFingerprint, setSavedFingerprint] = useState<string | null>(null);
   const [lastAutosaveAt, setLastAutosaveAt] = useState<number | null>(null);
@@ -453,11 +459,11 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     setIsConverting(true);
 
     try {
-      await convertCurrentMjmlToHtml(editor);
+      await convertCurrentMjmlToHtml(editor, htmlExportProfile);
     } finally {
       setIsConverting(false);
     }
-  }, [editor]);
+  }, [editor, htmlExportProfile]);
 
   const handleManualSave = useCallback(() => {
     if (!editor) {
@@ -541,6 +547,18 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
             >
               {isConverting ? '⏳ Exporting…' : '🚀 Export HTML'}
             </button>
+            <label className="templates-profile-field">
+              <span>Export Profile</span>
+              <select
+                className="templates-profile-select"
+                value={htmlExportProfile}
+                onChange={(event) => setHtmlExportProfile(event.target.value as HtmlExportProfile)}
+                disabled={isConverting}
+              >
+                <option value="email-safe">{HTML_EXPORT_PROFILE_LABEL['email-safe']}</option>
+                <option value="aggressive">{HTML_EXPORT_PROFILE_LABEL.aggressive}</option>
+              </select>
+            </label>
           </div>
 
           <div className="templates-action-group templates-action-group--session">

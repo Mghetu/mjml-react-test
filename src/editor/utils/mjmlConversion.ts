@@ -1,6 +1,9 @@
 // src/editor/utils/mjmlConversion.ts
 import type { Editor } from 'grapesjs';
+import mjml2htmlBrowser from 'mjml-browser';
 import { sanitizeMjmlMarkup } from './mjml';
+
+export type HtmlExportProfile = 'email-safe' | 'aggressive';
 
 const formatError = (error: unknown) => {
   if (error && typeof error === 'object') {
@@ -19,7 +22,10 @@ const formatError = (error: unknown) => {
   }
 };
 
-export async function convertCurrentMjmlToHtml(editor: Editor) {
+export async function convertCurrentMjmlToHtml(
+  editor: Editor,
+  profile: HtmlExportProfile = 'email-safe',
+) {
   const mjml = sanitizeMjmlMarkup(editor.getHtml());
 
   if (!mjml || mjml.trim().length === 0) {
@@ -33,8 +39,49 @@ export async function convertCurrentMjmlToHtml(editor: Editor) {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ mjml }),
+      body: JSON.stringify({ mjml, profile }),
     });
+
+    const canUseBrowserFallback =
+      response.status === 404 &&
+      typeof window !== 'undefined' &&
+      ['localhost', '127.0.0.1'].includes(window.location.hostname);
+
+    if (canUseBrowserFallback) {
+      const localResult = mjml2htmlBrowser(mjml, {
+        validationLevel: 'strict',
+        minify: true,
+        beautify: false,
+        keepComments: false,
+      });
+
+      const html = typeof localResult?.html === 'string' ? localResult.html : '';
+      const errors = Array.isArray(localResult?.errors) ? localResult.errors : [];
+
+      if (errors.length > 0) {
+        const message = errors.map(formatError).join('\n');
+        alert(`MJML export failed:\n\n${message}`);
+        return;
+      }
+
+      if (!html) {
+        alert('MJML export failed: local browser conversion returned no HTML.');
+        return;
+      }
+
+      alert(
+        'Running local fallback conversion (mjml-browser).\nImage compression via Tinify is skipped in this mode.'
+      );
+
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'template.html';
+      a.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
 
     const payload = (await response.json().catch(() => null)) as
       | { html?: string; errors?: unknown[]; error?: string }
