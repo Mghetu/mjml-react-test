@@ -138,7 +138,8 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   const [remoteTemplatesError, setRemoteTemplatesError] = useState<string | null>(null);
   const [activeRemoteTemplateId, setActiveRemoteTemplateId] = useState<string | null>(null);
   const [activeDeleteTemplateId, setActiveDeleteTemplateId] = useState<string | null>(null);
-  const [managementAdminToken, setManagementAdminToken] = useState('');
+  const [pendingDeleteTemplate, setPendingDeleteTemplate] = useState<RemoteTemplate | null>(null);
+  const [deleteTemplateAdminToken, setDeleteTemplateAdminToken] = useState('');
   const [uploadTemplateName, setUploadTemplateName] = useState('');
   const [uploadTemplateDescription, setUploadTemplateDescription] = useState('');
   const [uploadTemplateAdminToken, setUploadTemplateAdminToken] = useState('');
@@ -669,6 +670,8 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     setLibraryTemplatesModal(null);
     setActiveRemoteTemplateId(null);
     setActiveDeleteTemplateId(null);
+    setPendingDeleteTemplate(null);
+    setDeleteTemplateAdminToken('');
     setIsUploadingTemplate(false);
   }, []);
 
@@ -812,18 +815,27 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     uploadTemplateName,
   ]);
 
-  const deleteRemoteTemplate = useCallback(
-    async (template: RemoteTemplate) => {
-      const token = managementAdminToken.trim();
+  const openDeleteTemplateModal = useCallback((template: RemoteTemplate) => {
+    setPendingDeleteTemplate(template);
+    setDeleteTemplateAdminToken('');
+  }, []);
+
+  const cancelDeleteTemplateModal = useCallback(() => {
+    setPendingDeleteTemplate(null);
+    setDeleteTemplateAdminToken('');
+  }, []);
+
+  const confirmDeleteTemplate = useCallback(async () => {
+      if (!pendingDeleteTemplate) {
+        return;
+      }
+      const token = deleteTemplateAdminToken.trim();
       if (!token) {
         setToastMessage('Admin token is required for delete.');
         return;
       }
-      const confirmed = window.confirm(`Delete template "${template.name}"? This cannot be undone.`);
-      if (!confirmed) {
-        return;
-      }
 
+      const template = pendingDeleteTemplate;
       setActiveDeleteTemplateId(template.id);
       try {
         const response = await fetch('/api/templates/delete', {
@@ -841,6 +853,8 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
         }
 
         setToastMessage(`Template deleted: ${template.name}`);
+        setPendingDeleteTemplate(null);
+        setDeleteTemplateAdminToken('');
         await loadRemoteTemplates();
       } catch (error) {
         console.error('Failed to delete template.', error);
@@ -848,9 +862,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
       } finally {
         setActiveDeleteTemplateId(null);
       }
-    },
-    [loadRemoteTemplates, managementAdminToken],
-  );
+    }, [deleteTemplateAdminToken, loadRemoteTemplates, pendingDeleteTemplate]);
 
   const handleTriggerMjmlImport = useCallback(() => {
     if (!editor) {
@@ -1269,16 +1281,6 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
           <div className="session-modal templates-library-modal">
             <h4>Select template</h4>
             <p>Choose a shared MJML template to load into the editor.</p>
-            <label className="templates-upload-field">
-              <span>Admin token (for delete actions)</span>
-              <input
-                className="templates-project-name-input"
-                type="password"
-                value={managementAdminToken}
-                onChange={(event) => setManagementAdminToken(event.target.value)}
-                placeholder="APP_ACCESS_PASSWORD"
-              />
-            </label>
             {isLoadingRemoteTemplates ? (
               <p className="templates-library-state">Loading templates...</p>
             ) : null}
@@ -1319,7 +1321,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
                               className="templates-action-button templates-action-button--danger gjs-btn"
                               disabled={activeDeleteTemplateId === template.id}
                               onClick={() => {
-                                void deleteRemoteTemplate(template);
+                                openDeleteTemplateModal(template);
                               }}
                             >
                               {activeDeleteTemplateId === template.id ? 'Deleting...' : 'Delete'}
@@ -1351,6 +1353,47 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
                 disabled={isLoadingRemoteTemplates}
               >
                 Refresh list
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {pendingDeleteTemplate ? (
+        <div className="session-modal-overlay" role="dialog" aria-modal="true">
+          <div className="session-modal templates-upload-modal">
+            <h4>Delete template</h4>
+            <p>
+              You are deleting <strong>{pendingDeleteTemplate.name}</strong>. This cannot be undone.
+            </p>
+            <label className="templates-upload-field">
+              <span>Admin token</span>
+              <input
+                className="templates-project-name-input"
+                type="password"
+                value={deleteTemplateAdminToken}
+                onChange={(event) => setDeleteTemplateAdminToken(event.target.value)}
+                placeholder="APP_ACCESS_PASSWORD"
+                autoFocus
+              />
+            </label>
+            <div className="session-modal-actions">
+              <button
+                type="button"
+                className="templates-action-button gjs-btn"
+                onClick={cancelDeleteTemplateModal}
+                disabled={activeDeleteTemplateId === pendingDeleteTemplate.id}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="templates-action-button templates-action-button--danger gjs-btn"
+                onClick={() => {
+                  void confirmDeleteTemplate();
+                }}
+                disabled={activeDeleteTemplateId === pendingDeleteTemplate.id}
+              >
+                {activeDeleteTemplateId === pendingDeleteTemplate.id ? 'Deleting...' : 'Delete template'}
               </button>
             </div>
           </div>
