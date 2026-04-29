@@ -428,10 +428,11 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     : 'session-status-badge session-status-badge--saved';
 
   return (
-    <div
-      className="templates-panel gjs-one-bg gjs-two-color"
-      style={{ display: isVisible ? 'flex' : 'none' }}
-    >
+    <>
+      <div
+        className="templates-panel gjs-one-bg gjs-two-color"
+        style={{ display: isVisible ? 'flex' : 'none' }}
+      >
       <div className="templates-actions">
         <div className="templates-action-group">
           <h4 className="templates-group-title">Template Actions</h4>
@@ -520,7 +521,8 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
         onChange={handleImportSessionChange}
         style={{ display: 'none' }}
       />
+      </div>
       <div className={sessionStatusClass}>{sessionStatusLabel}</div>
-    </div>
+    </>
   );
 }
