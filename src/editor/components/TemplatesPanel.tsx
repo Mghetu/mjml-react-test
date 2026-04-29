@@ -1,5 +1,5 @@
 // src/editor/components/TemplatesPanel.tsx
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { useEditorMaybe } from '@grapesjs/react';
 import type { Editor, Page } from 'grapesjs';
@@ -7,6 +7,8 @@ import { sanitizeMjmlMarkup } from '../utils/mjml';
 import { convertCurrentMjmlToHtml } from '../utils/mjmlConversion';
 
 const MAX_TEMPLATE_SIZE = 5 * 1024 * 1024; // 5MB
+const LOCAL_SESSION_KEY = 'mjml-editor-local-session-v1';
+const AUTOSAVE_INTERVAL_MS = 60 * 1000;
 
 type RecentKind = 'mjml' | 'json';
 
@@ -30,22 +32,9 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   const editor = useEditorMaybe();
   const mjmlInputRef = useRef<HTMLInputElement | null>(null);
   const sessionInputRef = useRef<HTMLInputElement | null>(null);
+  const didTryRestoreRef = useRef(false);
   const [recentItems, setRecentItems] = useState<RecentItem[]>([]);
   const [isConverting, setIsConverting] = useState(false);
-
-  const downloadFile = useCallback((content: string, filename: string, mimeType: string) => {
-    const blob = new Blob([content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.append(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => {
-      URL.revokeObjectURL(url);
-    }, 0);
-  }, []);
 
   const updateRecents = useCallback((name: string, kind: RecentKind) => {
     const timestamp = Date.now();
@@ -59,6 +48,127 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
       };
       return [entry, ...filtered].slice(0, 3);
     });
+  }, []);
+
+  const loadStoredSession = useCallback(() => {
+    const raw = window.localStorage.getItem(LOCAL_SESSION_KEY);
+    if (!raw) {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as { mjml?: unknown; savedAt?: unknown };
+      if (typeof parsed?.mjml !== 'string' || parsed.mjml.trim().length === 0) {
+        return null;
+      }
+
+      return {
+        mjml: parsed.mjml,
+        savedAt:
+          typeof parsed.savedAt === 'number' && Number.isFinite(parsed.savedAt)
+            ? parsed.savedAt
+            : Date.now(),
+      };
+    } catch (error) {
+      console.error('Failed to parse stored session from localStorage.', error);
+      return null;
+    }
+  }, []);
+
+  const saveSessionToLocal = useCallback(
+    (source: 'manual' | 'auto' = 'manual') => {
+      if (!editor) {
+        return false;
+      }
+
+      try {
+        const mjml = sanitizeMjmlMarkup(editor.getHtml());
+        if (!mjml.toLowerCase().startsWith('<mjml')) {
+          return false;
+        }
+
+        window.localStorage.setItem(
+          LOCAL_SESSION_KEY,
+          JSON.stringify({
+            mjml,
+            savedAt: Date.now(),
+          }),
+        );
+
+        if (source === 'manual') {
+          window.alert('Current session saved locally.');
+        }
+        return true;
+      } catch (error) {
+        console.error('Failed to save local session.', error);
+        if (source === 'manual') {
+          window.alert('Unable to save the current session locally.');
+        }
+        return false;
+      }
+    },
+    [editor],
+  );
+
+  const restoreSessionFromLocal = useCallback(() => {
+    if (!editor) {
+      return;
+    }
+
+    const stored = loadStoredSession();
+    if (!stored) {
+      return;
+    }
+
+    try {
+      const sanitizedMarkup = sanitizeMjmlMarkup(stored.mjml);
+      if (!sanitizedMarkup.toLowerCase().startsWith('<mjml')) {
+        return;
+      }
+
+      editor.setComponents(sanitizedMarkup);
+      (editor as unknown as { trigger?: (event: string) => void }).trigger?.('mjml:imported');
+      updateRecents('Local Session (auto-restored)', 'mjml');
+    } catch (error) {
+      console.error('Failed to restore local session.', error);
+    }
+  }, [editor, loadStoredSession, updateRecents]);
+
+  useEffect(() => {
+    if (!editor || didTryRestoreRef.current) {
+      return;
+    }
+
+    didTryRestoreRef.current = true;
+    restoreSessionFromLocal();
+  }, [editor, restoreSessionFromLocal]);
+
+  useEffect(() => {
+    if (!editor) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      saveSessionToLocal('auto');
+    }, AUTOSAVE_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [editor, saveSessionToLocal]);
+
+  const downloadFile = useCallback((content: string, filename: string, mimeType: string) => {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 0);
   }, []);
 
   const handleTriggerMjmlImport = useCallback(() => {
@@ -255,6 +365,20 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     }
   }, [editor]);
 
+  const handleManualSave = useCallback(() => {
+    if (!editor) {
+      window.alert('Editor is not ready yet.');
+      return;
+    }
+
+    saveSessionToLocal('manual');
+  }, [editor, saveSessionToLocal]);
+
+  const handleEndSession = useCallback(() => {
+    window.localStorage.removeItem(LOCAL_SESSION_KEY);
+    window.location.reload();
+  }, []);
+
   return (
     <div
       className="templates-panel gjs-one-bg gjs-two-color"
@@ -305,6 +429,23 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
           title="Convert current MJML to HTML in the browser"
         >
           {isConverting ? 'Converting…' : 'Convert MJML to HTML'}
+        </button>
+        <button
+          type="button"
+          className="templates-action-button gjs-btn"
+          onClick={handleManualSave}
+          disabled={!editor}
+          title="Save current session to local storage"
+        >
+          Save Session
+        </button>
+        <button
+          type="button"
+          className="templates-action-button gjs-btn"
+          onClick={handleEndSession}
+          title="Clear local session and restart"
+        >
+          End Session
         </button>
       </div>
 
