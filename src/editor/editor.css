@@ -285,6 +285,12 @@
   gap: 8px;
 }
 
+.templates-autosaved-item--active {
+  border-color: #7c3aed;
+  background: linear-gradient(180deg, rgba(124, 58, 237, 0.16), rgba(124, 58, 237, 0.06));
+  box-shadow: inset 0 0 0 1px rgba(167, 139, 250, 0.45);
+}
+
 .templates-autosaved-meta {
   display: flex;
   flex-direction: column;

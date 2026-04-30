@@ -1508,7 +1508,10 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
                     const savedAtLabel = new Date(session.savedAt).toLocaleString();
                     const isRestoring = activeAutosavedSessionKey === session.key;
                     return (
-                      <li key={session.key} className="templates-autosaved-item">
+                      <li
+                        key={session.key}
+                        className={`templates-autosaved-item ${isCurrentTab ? 'templates-autosaved-item--active' : ''}`}
+                      >
                         <div className="templates-autosaved-meta">
                           <strong>{displayName}</strong>
                           <span>{savedAtLabel}</span>
