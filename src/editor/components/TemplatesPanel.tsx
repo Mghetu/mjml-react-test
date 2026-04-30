@@ -123,7 +123,7 @@ interface AutosavedSessionItem {
 }
 
 type SessionModalKind = 'end-session' | null;
-type ProjectActionKind = 'download-mjml' | 'export-html' | null;
+type ProjectActionKind = 'download-mjml' | 'export-html' | 'manual-save' | 'load-template' | null;
 type LibraryTemplatesModalKind = 'select-template' | 'upload-template' | null;
 
 interface RemoteTemplate {
@@ -948,13 +948,12 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
           return;
         }
 
+        setProjectName(null);
         setFreshTemplateFingerprint(null);
         setAutosaveEnabled(true);
         updateRecents(template.name, 'mjml');
-        window.setTimeout(() => {
-          void saveSessionToLocal('auto');
-        }, 0);
-        setToastMessage(`Loaded template: ${template.name}`);
+        setProjectNameDraft(template.name.trim());
+        setProjectNameModalAction('load-template');
         closeTemplatesLibraryModal();
       } catch (error) {
         console.error('Failed to load remote template.', error);
@@ -963,7 +962,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
         setActiveRemoteTemplateId(null);
       }
     },
-    [applyMjmlToEditor, closeTemplatesLibraryModal, editor, saveSessionToLocal, updateRecents],
+    [applyMjmlToEditor, closeTemplatesLibraryModal, editor, updateRecents],
   );
 
   const handleUploadTemplateFileChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
@@ -1262,8 +1261,13 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
       return;
     }
 
+    if (!projectName) {
+      requestProjectNameForAction('manual-save');
+      return;
+    }
+
     void saveSessionToLocal('manual');
-  }, [editor, saveSessionToLocal]);
+  }, [editor, projectName, requestProjectNameForAction, saveSessionToLocal]);
 
   const handleEndSession = useCallback(() => {
     setSessionModal('end-session');
@@ -1354,8 +1358,25 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     }
     if (action === 'export-html') {
       await executeExportHtml(trimmed);
+      return;
     }
-  }, [executeDownloadMjml, executeExportHtml, projectNameDraft, projectNameModalAction]);
+    if (action === 'manual-save') {
+      setProjectName(trimmed);
+      await saveSessionToLocal('manual', { projectName: trimmed });
+      return;
+    }
+    if (action === 'load-template') {
+      setProjectName(trimmed);
+      await saveSessionToLocal('manual', { projectName: trimmed });
+      setToastMessage(`Template loaded. Project name: ${trimmed}`);
+    }
+  }, [
+    executeDownloadMjml,
+    executeExportHtml,
+    projectNameDraft,
+    projectNameModalAction,
+    saveSessionToLocal,
+  ]);
 
   const isUnsaved =
     autosaveEnabled &&
@@ -1795,7 +1816,11 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
             <p>
               {projectNameModalAction === 'download-mjml'
                 ? 'Set a project name for this MJML download.'
-                : 'Set a project name before HTML export.'}
+                : projectNameModalAction === 'export-html'
+                  ? 'Set a project name before HTML export.'
+                  : projectNameModalAction === 'manual-save'
+                    ? 'Name this project to save the local session.'
+                    : 'Name this project before loading the database template.'}
             </p>
             <input
               className="templates-project-name-input"
@@ -1820,7 +1845,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
                   void confirmProjectNameModal();
                 }}
               >
-                Continue
+                Save name
               </button>
             </div>
           </div>
