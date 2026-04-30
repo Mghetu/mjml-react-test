@@ -1499,7 +1499,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
               </button>
             </div>
             <div className="templates-autosaved-sessions">
-              <h5 className="templates-subgroup-title">Autosaved Sessions</h5>
+              <h5 className="templates-subgroup-title">Sessions saved locally</h5>
               {autosavedSessions.length > 0 ? (
                 <ul className="templates-autosaved-list">
                   {autosavedSessions.map((session) => {
