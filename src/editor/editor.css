@@ -233,6 +233,12 @@
   gap: 8px;
 }
 
+.templates-group-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .templates-action-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -326,12 +332,19 @@
   color: var(--gjs-secondary-color);
 }
 
+.templates-group-description {
+  margin: 0;
+  color: var(--gjs-secondary-color);
+  font-size: 0.73rem;
+  line-height: 1.35;
+}
+
 .templates-action-button {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 52px;
+  min-height: 48px;
   padding: 10px 12px;
   border: 1px solid var(--gjs-main-dark-color);
   border-radius: 3px;
@@ -344,7 +357,8 @@
   cursor: pointer;
   transition: background var(--gjs-animation-duration),
     border-color var(--gjs-animation-duration),
-    color var(--gjs-animation-duration);
+    color var(--gjs-animation-duration),
+    box-shadow var(--gjs-animation-duration);
 }
 
 .templates-action-button--tall {
@@ -361,11 +375,21 @@
 }
 
 .templates-action-button:hover,
-.templates-action-button:focus {
+.templates-action-button:focus-visible {
   background: var(--gjs-main-dark-color);
   border-color: var(--gjs-color-highlight);
   color: var(--gjs-font-color-active);
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.35);
+}
+
+.templates-action-button:focus {
   outline: none;
+}
+
+.templates-action-button--secondary {
+  background: var(--gjs-main-light-color);
+  border-color: var(--gjs-main-dark-color);
+  color: var(--gjs-font-color-active);
 }
 
 .templates-action-button:disabled {
@@ -381,10 +405,11 @@
 }
 
 .templates-action-button--primary:hover,
-.templates-action-button--primary:focus {
+.templates-action-button--primary:focus-visible {
   background: linear-gradient(135deg, #6d4fff, #8f46ff);
   border-color: #a78bfa;
   color: #ffffff;
+  box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.45), 0 6px 16px rgba(76, 29, 149, 0.35);
 }
 
 .templates-action-button--danger {
@@ -394,10 +419,11 @@
 }
 
 .templates-action-button--danger:hover,
-.templates-action-button--danger:focus {
+.templates-action-button--danger:focus-visible {
   background: #7f1d1d;
   border-color: #b91c1c;
   color: #ffffff;
+  box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.35);
 }
 
 .templates-profile-field {
@@ -438,18 +464,16 @@
 .templates-profile-select:focus {
   outline: none;
   border-color: var(--gjs-color-highlight);
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.3);
 }
 
 .templates-recents {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  flex: 1;
-}
-
-/* Keep Recent section mounted, but hidden from UI for now. */
-.templates-recents {
-  display: none;
+  border-top: 1px solid var(--gjs-main-dark-color);
+  margin-top: 6px;
+  padding-top: 10px;
 }
 
 .templates-recents h4 {
@@ -637,6 +661,40 @@
   color: var(--gjs-secondary-color);
 }
 
+.templates-library-controls {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.templates-library-search-input {
+  margin-top: 0;
+}
+
+.templates-library-control-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.templates-library-control-row--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.templates-library-control-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.templates-library-control-field span {
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--gjs-secondary-color);
+}
+
 .templates-library-state--error {
   color: #fca5a5;
 }
@@ -672,13 +730,6 @@
 .templates-library-item-header strong {
   color: var(--gjs-font-color-active);
   font-size: 0.84rem;
-}
-
-.templates-library-item-header span {
-  font-size: 0.68rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--gjs-secondary-color);
 }
 
 .templates-library-item-description {
@@ -733,6 +784,7 @@
 .templates-project-name-input:focus {
   outline: none;
   border-color: var(--gjs-color-highlight);
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.3);
 }
 
 .templates-recents-empty {

@@ -1,5 +1,5 @@
 // src/editor/components/TemplatesPanel.tsx
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { useEditorMaybe } from '@grapesjs/react';
 import type { Editor, Page } from 'grapesjs';
@@ -24,6 +24,8 @@ const SESSION_RETENTION_DAYS = 7;
 const SESSION_RETENTION_MS = SESSION_RETENTION_DAYS * 24 * 60 * 60 * 1000;
 const TAB_SESSION_LEASE_MS = 15 * 1000;
 const TAB_SESSION_HEARTBEAT_MS = 5 * 1000;
+const SHOW_JSON_ACTIONS = false;
+const SHOW_RECENT_ACTIVITY = false;
 
 const createTabSessionId = () => {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -125,6 +127,7 @@ interface AutosavedSessionItem {
 type SessionModalKind = 'end-session' | null;
 type ProjectActionKind = 'download-mjml' | 'export-html' | 'manual-save' | 'load-template' | null;
 type LibraryTemplatesModalKind = 'select-template' | 'upload-template' | null;
+type LibrarySortKind = 'recent' | 'name-asc';
 
 interface RemoteTemplate {
   id: string;
@@ -276,6 +279,8 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   const [remoteTemplatesError, setRemoteTemplatesError] = useState<string | null>(null);
   const [activeRemoteTemplateId, setActiveRemoteTemplateId] = useState<string | null>(null);
   const [activeDeleteTemplateId, setActiveDeleteTemplateId] = useState<string | null>(null);
+  const [librarySearchQuery, setLibrarySearchQuery] = useState('');
+  const [librarySort, setLibrarySort] = useState<LibrarySortKind>('recent');
   const [pendingDeleteTemplate, setPendingDeleteTemplate] = useState<RemoteTemplate | null>(null);
   const [deleteTemplateAdminToken, setDeleteTemplateAdminToken] = useState('');
   const [uploadTemplateName, setUploadTemplateName] = useState('');
@@ -300,6 +305,14 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
       return [entry, ...filtered].slice(0, 3);
     });
   }, []);
+
+  const showToast = useCallback((message: string) => {
+    setToastMessage(message);
+  }, []);
+
+  const notifyEditorNotReady = useCallback(() => {
+    showToast('Editor is not ready yet.');
+  }, [showToast]);
 
   const loadStoredSession = useCallback(async (): Promise<StoredSession | null> => {
     const raw = window.localStorage.getItem(scopedSessionKey);
@@ -777,13 +790,13 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   const executeDownloadMjml = useCallback(
     (resolvedProjectName: string) => {
       if (!editor) {
-        window.alert('Editor is not ready yet.');
+        notifyEditorNotReady();
         return;
       }
 
       const versionState = resolveProjectVersionForOutput();
       if (!versionState) {
-        window.alert('Unable to determine the current MJML content.');
+        showToast('Unable to determine the current MJML content.');
         return;
       }
 
@@ -800,19 +813,27 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
         versionFingerprint: nextVersionFingerprint,
       });
     },
-    [downloadFile, editor, resolveProjectVersionForOutput, sanitizeProjectFileName, saveSessionToLocal],
+    [
+      downloadFile,
+      editor,
+      notifyEditorNotReady,
+      resolveProjectVersionForOutput,
+      sanitizeProjectFileName,
+      saveSessionToLocal,
+      showToast,
+    ],
   );
 
   const executeExportHtml = useCallback(
     async (resolvedProjectName: string) => {
       if (!editor) {
-        window.alert('Editor is not ready yet.');
+        notifyEditorNotReady();
         return;
       }
 
       const versionState = resolveProjectVersionForOutput();
       if (!versionState) {
-        window.alert('Unable to determine the current MJML content.');
+        showToast('Unable to determine the current MJML content.');
         return;
       }
 
@@ -838,9 +859,11 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     [
       editor,
       htmlExportProfile,
+      notifyEditorNotReady,
       resolveProjectVersionForOutput,
       sanitizeProjectFileName,
       saveSessionToLocal,
+      showToast,
     ],
   );
 
@@ -892,16 +915,18 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
 
   const openTemplatesLibraryModal = useCallback(() => {
     if (!editor) {
-      window.alert('Editor is not ready yet.');
+      notifyEditorNotReady();
       return;
     }
+    setLibrarySearchQuery('');
+    setLibrarySort('recent');
     setLibraryTemplatesModal('select-template');
     void loadRemoteTemplates();
-  }, [editor, loadRemoteTemplates]);
+  }, [editor, loadRemoteTemplates, notifyEditorNotReady]);
 
   const openUploadTemplateModal = useCallback(() => {
     if (!editor) {
-      window.alert('Editor is not ready yet.');
+      notifyEditorNotReady();
       return;
     }
     setUploadTemplateName('');
@@ -910,7 +935,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     setUploadTemplateFileName(null);
     setUploadTemplateMjml(null);
     setLibraryTemplatesModal('upload-template');
-  }, [editor]);
+  }, [editor, notifyEditorNotReady]);
 
   const closeTemplatesLibraryModal = useCallback(() => {
     setLibraryTemplatesModal(null);
@@ -924,7 +949,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   const loadRemoteTemplateIntoEditor = useCallback(
     async (template: RemoteTemplate) => {
       if (!editor) {
-        window.alert('Editor is not ready yet.');
+        notifyEditorNotReady();
         return;
       }
       setActiveRemoteTemplateId(template.id);
@@ -934,17 +959,17 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
           | { mjml?: string; error?: string }
           | null;
         if (!response.ok) {
-          window.alert(payload?.error || 'Failed to load selected template.');
+          showToast(payload?.error || 'Failed to load selected template.');
           return;
         }
         if (typeof payload?.mjml !== 'string' || !payload.mjml.trim()) {
-          window.alert('Selected template is empty or invalid.');
+          showToast('Selected template is empty or invalid.');
           return;
         }
 
         const applied = applyMjmlToEditor(payload.mjml);
         if (!applied) {
-          window.alert('Selected template does not contain a valid <mjml> root element.');
+          showToast('Selected template does not contain a valid <mjml> root element.');
           return;
         }
 
@@ -957,12 +982,12 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
         closeTemplatesLibraryModal();
       } catch (error) {
         console.error('Failed to load remote template.', error);
-        window.alert('Failed to load selected template.');
+        showToast('Failed to load selected template.');
       } finally {
         setActiveRemoteTemplateId(null);
       }
     },
-    [applyMjmlToEditor, closeTemplatesLibraryModal, editor, updateRecents],
+    [applyMjmlToEditor, closeTemplatesLibraryModal, editor, notifyEditorNotReady, showToast, updateRecents],
   );
 
   const handleUploadTemplateFileChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
@@ -973,25 +998,25 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
       return;
     }
     if (file.size > MAX_REMOTE_TEMPLATE_SIZE) {
-      window.alert('Template file is too large (maximum size is 2 MB).');
+      showToast('Template file is too large (maximum size is 2 MB).');
       input.value = '';
       return;
     }
 
     const reader = new FileReader();
     reader.onerror = () => {
-      window.alert('Failed to read the selected MJML file.');
+      showToast('Failed to read the selected MJML file.');
       input.value = '';
     };
     reader.onload = () => {
       input.value = '';
       const result = reader.result;
       if (typeof result !== 'string' || !result.trim()) {
-        window.alert('Unable to read MJML file contents.');
+        showToast('Unable to read MJML file contents.');
         return;
       }
       if (!sanitizeMjmlMarkup(result).toLowerCase().startsWith('<mjml')) {
-        window.alert('The selected file does not contain a valid <mjml> root element.');
+        showToast('The selected file does not contain a valid <mjml> root element.');
         return;
       }
       setUploadTemplateFileName(file.name);
@@ -1002,7 +1027,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
       }
     };
     reader.readAsText(file);
-  }, [uploadTemplateName]);
+  }, [showToast, uploadTemplateName]);
 
   const submitTemplateUpload = useCallback(async () => {
     const name = uploadTemplateName.trim();
@@ -1039,7 +1064,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
       });
       const payload = (await response.json().catch(() => null)) as { error?: string } | null;
       if (!response.ok) {
-        window.alert(payload?.error || 'Failed to upload template.');
+        showToast(payload?.error || 'Failed to upload template.');
         return;
       }
       setToastMessage(`Template uploaded: ${name}`);
@@ -1049,7 +1074,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
       await loadRemoteTemplates();
     } catch (error) {
       console.error('Failed to upload template.', error);
-      window.alert('Failed to upload template.');
+      showToast('Failed to upload template.');
     } finally {
       setIsUploadingTemplate(false);
     }
@@ -1060,6 +1085,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     uploadTemplateDescription,
     uploadTemplateMjml,
     uploadTemplateName,
+    showToast,
   ]);
 
   const openDeleteTemplateModal = useCallback((template: RemoteTemplate) => {
@@ -1095,7 +1121,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
         });
         const payload = (await response.json().catch(() => null)) as { error?: string } | null;
         if (!response.ok) {
-          window.alert(payload?.error || 'Failed to delete template.');
+          showToast(payload?.error || 'Failed to delete template.');
           return;
         }
 
@@ -1105,20 +1131,20 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
         await loadRemoteTemplates();
       } catch (error) {
         console.error('Failed to delete template.', error);
-        window.alert('Failed to delete template.');
+        showToast('Failed to delete template.');
       } finally {
         setActiveDeleteTemplateId(null);
       }
-    }, [deleteTemplateAdminToken, loadRemoteTemplates, pendingDeleteTemplate]);
+    }, [deleteTemplateAdminToken, loadRemoteTemplates, pendingDeleteTemplate, showToast]);
 
   const handleTriggerMjmlImport = useCallback(() => {
     if (!editor) {
-      window.alert('Editor is not ready yet.');
+      notifyEditorNotReady();
       return;
     }
 
     mjmlInputRef.current?.click();
-  }, [editor]);
+  }, [editor, notifyEditorNotReady]);
 
   const handleImportMjmlChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
@@ -1131,34 +1157,34 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
       }
 
       if (!editor) {
-        window.alert('Editor is not ready yet.');
+        notifyEditorNotReady();
         input.value = '';
         return;
       }
 
       if (file.size > MAX_TEMPLATE_SIZE) {
-        window.alert('Template is too large (maximum size is 5 MB).');
+        showToast('Template is too large (maximum size is 5 MB).');
         input.value = '';
         return;
       }
 
       const reader = new FileReader();
       reader.onerror = () => {
-        window.alert('Failed to read the selected MJML file.');
+        showToast('Failed to read the selected MJML file.');
         input.value = '';
       };
       reader.onload = () => {
         input.value = '';
         const result = reader.result;
         if (typeof result !== 'string') {
-          window.alert('Unable to read MJML file contents.');
+          showToast('Unable to read MJML file contents.');
           return;
         }
 
         try {
           const applied = applyMjmlToEditor(result);
           if (!applied) {
-            window.alert('The selected file does not contain a valid <mjml> root element.');
+            showToast('The selected file does not contain a valid <mjml> root element.');
             return;
           }
           setFreshTemplateFingerprint(null);
@@ -1170,14 +1196,22 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
           }, 0);
         } catch (error) {
           console.error(error);
-          window.alert('Failed to import the MJML template.');
+          showToast('Failed to import the MJML template.');
         }
       };
 
       reader.readAsText(file);
     },
-    [applyMjmlToEditor, editor, saveSessionToLocal, updateRecents],
+    [applyMjmlToEditor, editor, notifyEditorNotReady, saveSessionToLocal, showToast, updateRecents],
   );
+
+  const handleTriggerSessionImport = useCallback(() => {
+    if (!editor) {
+      notifyEditorNotReady();
+      return;
+    }
+    sessionInputRef.current?.click();
+  }, [editor, notifyEditorNotReady]);
 
   const handleImportSessionChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
@@ -1190,21 +1224,21 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
       }
 
       if (!editor) {
-        window.alert('Editor is not ready yet.');
+        notifyEditorNotReady();
         input.value = '';
         return;
       }
 
       const reader = new FileReader();
       reader.onerror = () => {
-        window.alert('Failed to read the selected session file.');
+        showToast('Failed to read the selected session file.');
         input.value = '';
       };
       reader.onload = () => {
         input.value = '';
         const result = reader.result;
         if (typeof result !== 'string') {
-          window.alert('Invalid session JSON file.');
+          showToast('Invalid session JSON file.');
           return;
         }
 
@@ -1217,21 +1251,21 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
             editor.Pages.select(firstPage);
           }
           updateRecents(file.name, 'json');
-          window.alert('Session imported successfully.');
+          showToast('Session imported successfully.');
         } catch (error) {
           console.error(error);
-          window.alert('Invalid session JSON file.');
+          showToast('Invalid session JSON file.');
         }
       };
 
       reader.readAsText(file);
     },
-    [editor, updateRecents],
+    [editor, notifyEditorNotReady, showToast, updateRecents],
   );
 
   const handleExportMjml = useCallback(() => {
     if (!editor) {
-      window.alert('Editor is not ready yet.');
+      notifyEditorNotReady();
       return;
     }
     if (!projectName) {
@@ -1239,11 +1273,11 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
       return;
     }
     executeDownloadMjml(projectName);
-  }, [editor, executeDownloadMjml, projectName, requestProjectNameForAction]);
+  }, [editor, executeDownloadMjml, notifyEditorNotReady, projectName, requestProjectNameForAction]);
 
   const handleConvertMjmlToHtml = useCallback(async () => {
     if (!editor) {
-      window.alert('Editor is not ready yet.');
+      notifyEditorNotReady();
       return;
     }
 
@@ -1253,11 +1287,11 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     }
 
     await executeExportHtml(projectName);
-  }, [editor, executeExportHtml, projectName, requestProjectNameForAction]);
+  }, [editor, executeExportHtml, notifyEditorNotReady, projectName, requestProjectNameForAction]);
 
   const handleManualSave = useCallback(() => {
     if (!editor) {
-      window.alert('Editor is not ready yet.');
+      notifyEditorNotReady();
       return;
     }
 
@@ -1267,7 +1301,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     }
 
     void saveSessionToLocal('manual');
-  }, [editor, projectName, requestProjectNameForAction, saveSessionToLocal]);
+  }, [editor, notifyEditorNotReady, projectName, requestProjectNameForAction, saveSessionToLocal]);
 
   const handleEndSession = useCallback(() => {
     setSessionModal('end-session');
@@ -1276,7 +1310,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   const handleRestoreAutosavedSession = useCallback(
     async (sessionKey: string) => {
       if (!editor) {
-        window.alert('Editor is not ready yet.');
+        notifyEditorNotReady();
         return;
       }
 
@@ -1326,8 +1360,31 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
         setActiveAutosavedSessionKey(null);
       }
     },
-    [editor, loadStoredSessionByKey, refreshAutosavedSessions, restoreStoredSession, scopedSessionKey],
+    [editor, loadStoredSessionByKey, notifyEditorNotReady, refreshAutosavedSessions, restoreStoredSession, scopedSessionKey],
   );
+
+  const filteredRemoteTemplates = useMemo(() => {
+    const normalizedQuery = librarySearchQuery.trim().toLowerCase();
+    const byFilter = remoteTemplates.filter((template) => {
+      const matchesQuery =
+        normalizedQuery.length === 0 ||
+        template.name.toLowerCase().includes(normalizedQuery) ||
+        template.description.toLowerCase().includes(normalizedQuery);
+      return matchesQuery;
+    });
+
+    const sorted = [...byFilter];
+    if (librarySort === 'name-asc') {
+      sorted.sort((a, b) => a.name.localeCompare(b.name));
+      return sorted;
+    }
+    sorted.sort((a, b) => {
+      const aTs = Date.parse(a.updatedAt || '');
+      const bTs = Date.parse(b.updatedAt || '');
+      return (Number.isFinite(bTs) ? bTs : 0) - (Number.isFinite(aTs) ? aTs : 0);
+    });
+    return sorted;
+  }, [librarySearchQuery, librarySort, remoteTemplates]);
 
   const confirmEndSession = useCallback(() => {
     window.localStorage.removeItem(scopedSessionKey);
@@ -1408,10 +1465,16 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
       >
         <div className="templates-actions">
           <div className="templates-action-group">
+            <div className="templates-group-header">
+              <h4 className="templates-group-title">Quick Actions</h4>
+              <p className="templates-group-description">
+                Import or export template files for the current project.
+              </p>
+            </div>
             <div className="templates-action-row">
               <button
                 type="button"
-                className="templates-action-button templates-action-button--tall gjs-btn"
+                className="templates-action-button templates-action-button--secondary gjs-btn"
                 onClick={handleTriggerMjmlImport}
                 disabled={!editor}
                 title="Import an MJML template from your computer"
@@ -1420,7 +1483,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
               </button>
               <button
                 type="button"
-                className="templates-action-button templates-action-button--tall gjs-btn"
+                className="templates-action-button templates-action-button--secondary gjs-btn"
                 onClick={handleExportMjml}
                 disabled={!editor}
                 title="Download the current MJML markup"
@@ -1452,11 +1515,13 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
           </div>
 
           <div className="templates-action-group templates-action-group--session">
-            <h4 className="templates-group-title">Session Management</h4>
+            <div className="templates-group-header">
+              <h4 className="templates-group-title">Session</h4>
+            </div>
             <div className="templates-action-row">
               <button
                 type="button"
-                className="templates-action-button gjs-btn"
+                className="templates-action-button templates-action-button--secondary gjs-btn"
                 onClick={handleManualSave}
                 disabled={!editor}
                 title="Save current session to local storage"
@@ -1465,21 +1530,39 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
               </button>
               <button
                 type="button"
-                className="templates-action-button gjs-btn"
+                className="templates-action-button templates-action-button--danger gjs-btn"
                 onClick={handleEndSession}
                 title="Clear local session and restart"
               >
                 🧹 End Session
               </button>
             </div>
+            {SHOW_JSON_ACTIONS ? (
+              <div className="templates-action-row">
+                <button
+                  type="button"
+                  className="templates-action-button templates-action-button--secondary gjs-btn"
+                  onClick={handleTriggerSessionImport}
+                  disabled={!editor}
+                  title="Import a saved GrapesJS session JSON"
+                >
+                  📥 Import Session JSON
+                </button>
+              </div>
+            ) : null}
           </div>
 
           <div className="templates-action-group templates-action-group--database">
-            <h4 className="templates-group-title">Database templates</h4>
+            <div className="templates-group-header">
+              <h4 className="templates-group-title">Template Library</h4>
+              <p className="templates-group-description">
+                Browse shared templates or upload new ones to the database.
+              </p>
+            </div>
             <div className="templates-action-row">
               <button
                 type="button"
-                className="templates-action-button templates-action-button--full gjs-btn"
+                className="templates-action-button templates-action-button--full templates-action-button--secondary gjs-btn"
                 onClick={openTemplatesLibraryModal}
                 disabled={!editor}
                 title="Select one of the shared MJML templates from the database"
@@ -1490,7 +1573,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
             <div className="templates-action-row">
               <button
                 type="button"
-                className="templates-action-button templates-action-button--full gjs-btn"
+                className="templates-action-button templates-action-button--full templates-action-button--secondary gjs-btn"
                 onClick={openUploadTemplateModal}
                 disabled={!editor}
                 title="Upload a new shared template to the database"
@@ -1538,21 +1621,23 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
           </div>
         </div>
 
-        <div className="templates-recents">
-          <h4>Recent</h4>
-          {recentItems.length > 0 ? (
-            <ul className="templates-recents-list">
-              {recentItems.map((item) => (
-                <li key={item.id} className="templates-recent-item">
-                  <span className="templates-recent-name">{item.name}</span>
-                  <span className="templates-recent-type">{RECENT_KIND_LABEL[item.kind]}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="templates-recents-empty">No recent files yet.</p>
-          )}
-        </div>
+        {SHOW_RECENT_ACTIVITY ? (
+          <div className="templates-recents">
+            <h4>Recent activity</h4>
+            {recentItems.length > 0 ? (
+              <ul className="templates-recents-list">
+                {recentItems.map((item) => (
+                  <li key={item.id} className="templates-recent-item">
+                    <span className="templates-recent-name">{item.name}</span>
+                    <span className="templates-recent-type">{RECENT_KIND_LABEL[item.kind]}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="templates-recents-empty">No recent files yet.</p>
+            )}
+          </div>
+        ) : null}
 
         <input
           ref={mjmlInputRef}
@@ -1561,13 +1646,15 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
           onChange={handleImportMjmlChange}
           style={{ display: 'none' }}
         />
-        <input
-          ref={sessionInputRef}
-          type="file"
-          accept=".json,application/json"
-          onChange={handleImportSessionChange}
-          style={{ display: 'none' }}
-        />
+        {SHOW_JSON_ACTIONS ? (
+          <input
+            ref={sessionInputRef}
+            type="file"
+            accept=".json,application/json"
+            onChange={handleImportSessionChange}
+            style={{ display: 'none' }}
+          />
+        ) : null}
       </div>
       {shouldShowSessionStatus ? (
         <div className={sessionStatusClass}>
@@ -1591,7 +1678,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
             {sessionModal === 'end-session' ? (
               <>
                 <h4>End current session?</h4>
-                <p>This will clear the local draft and reload the editor.</p>
+                <p>This will clear the local draft for this tab and reload the editor.</p>
                 <div className="session-modal-actions">
                   <button
                     type="button"
@@ -1602,7 +1689,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
                   </button>
                   <button
                     type="button"
-                    className="templates-action-button templates-action-button--primary gjs-btn"
+                    className="templates-action-button templates-action-button--danger gjs-btn"
                     onClick={confirmEndSession}
                   >
                     End session
@@ -1618,6 +1705,28 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
           <div className="session-modal templates-library-modal">
             <h4>Select template</h4>
             <p>Choose a shared MJML template to load into the editor.</p>
+            <div className="templates-library-controls">
+              <input
+                className="templates-project-name-input templates-library-search-input"
+                type="search"
+                value={librarySearchQuery}
+                onChange={(event) => setLibrarySearchQuery(event.target.value)}
+                placeholder="Search by name or description"
+              />
+              <div className="templates-library-control-row templates-library-control-row--single">
+                <label className="templates-library-control-field">
+                  <span>Sort</span>
+                  <select
+                    className="templates-profile-select"
+                    value={librarySort}
+                    onChange={(event) => setLibrarySort(event.target.value as LibrarySortKind)}
+                  >
+                    <option value="recent">Most recent</option>
+                    <option value="name-asc">Name A-Z</option>
+                  </select>
+                </label>
+              </div>
+            </div>
             {isLoadingRemoteTemplates ? (
               <p className="templates-library-state">Loading templates...</p>
             ) : null}
@@ -1625,9 +1734,9 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
               <p className="templates-library-state templates-library-state--error">{remoteTemplatesError}</p>
             ) : null}
             {!isLoadingRemoteTemplates && !remoteTemplatesError ? (
-              remoteTemplates.length > 0 ? (
+              filteredRemoteTemplates.length > 0 ? (
                 <ul className="templates-library-list">
-                  {remoteTemplates.map((template) => {
+                  {filteredRemoteTemplates.map((template) => {
                     const updatedAtLabel = template.updatedAt
                       ? new Date(template.updatedAt).toLocaleDateString()
                       : null;
@@ -1635,7 +1744,6 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
                       <li key={template.id} className="templates-library-item">
                         <div className="templates-library-item-header">
                           <strong>{template.name}</strong>
-                          {template.locale ? <span>{template.locale}</span> : null}
                         </div>
                         {template.description ? (
                           <p className="templates-library-item-description">{template.description}</p>
@@ -1645,7 +1753,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
                           <div className="templates-library-item-actions">
                             <button
                               type="button"
-                              className="templates-action-button gjs-btn"
+                              className="templates-action-button templates-action-button--secondary gjs-btn"
                               disabled={activeRemoteTemplateId === template.id}
                               onClick={() => {
                                 void loadRemoteTemplateIntoEditor(template);
@@ -1670,7 +1778,11 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
                   })}
                 </ul>
               ) : (
-                <p className="templates-library-state">No templates are available yet.</p>
+                <p className="templates-library-state">
+                  {remoteTemplates.length === 0
+                    ? 'No templates are available yet.'
+                    : 'No templates match the current filters.'}
+                </p>
               )
             ) : null}
             <div className="session-modal-actions">
@@ -1683,7 +1795,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
               </button>
               <button
                 type="button"
-                className="templates-action-button templates-action-button--primary gjs-btn"
+                className="templates-action-button templates-action-button--secondary gjs-btn"
                 onClick={() => {
                   void loadRemoteTemplates();
                 }}
