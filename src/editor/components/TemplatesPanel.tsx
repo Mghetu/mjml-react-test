@@ -319,6 +319,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   const [isUploadingTemplate, setIsUploadingTemplate] = useState(false);
   const [autosavedSessions, setAutosavedSessions] = useState<AutosavedSessionItem[]>([]);
   const [activeAutosavedSessionKey, setActiveAutosavedSessionKey] = useState<string | null>(null);
+  const [isCompactSessionStatus, setIsCompactSessionStatus] = useState(false);
 
   const updateRecents = useCallback((name: string, kind: RecentKind) => {
     const timestamp = Date.now();
@@ -1503,6 +1504,22 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     ? 'session-status-badge session-status-badge--unsaved'
     : 'session-status-badge session-status-badge--saved';
   const shouldShowSessionStatus = hasLocalSave || isUnsaved;
+
+  useEffect(() => {
+    if (!shouldShowSessionStatus || isUnsaved) {
+      setIsCompactSessionStatus(false);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setIsCompactSessionStatus(true);
+    }, 3000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [isUnsaved, shouldShowSessionStatus, lastAutosaveAt]);
+
   return (
     <>
       <div
@@ -1703,10 +1720,19 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
         ) : null}
       </div>
       {shouldShowSessionStatus ? (
-        <div className={sessionStatusClass}>
+        <div
+          className={`${sessionStatusClass} ${isCompactSessionStatus ? 'session-status-badge--compact' : ''}`}
+          role="status"
+          aria-live="polite"
+          aria-label={
+            lastAutosaveLabel
+              ? `${sessionStatusLabel}. Last autosave at ${lastAutosaveLabel}.`
+              : sessionStatusLabel
+          }
+        >
           <div className="session-status-title">
             <span className="session-status-dot" aria-hidden="true" />
-            {sessionStatusLabel}
+            <span className="session-status-label">{sessionStatusLabel}</span>
           </div>
           <div className="session-status-meta">
             {lastAutosaveLabel ? `Last autosave at ${lastAutosaveLabel}` : 'Last autosave: not yet'}

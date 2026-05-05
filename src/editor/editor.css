@@ -525,8 +525,10 @@
   border-radius: 10px;
   padding: 8px 10px;
   min-width: 210px;
-  pointer-events: none;
+  pointer-events: auto;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  transition: width 180ms ease, min-width 180ms ease, padding 180ms ease, border-radius 180ms ease,
+    opacity 180ms ease;
 }
 
 .session-status-title {
@@ -552,10 +554,71 @@
   opacity: 0.9;
 }
 
+.session-status-badge--compact {
+  min-width: 14px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.session-status-badge--compact .session-status-title {
+  gap: 0;
+}
+
+.session-status-badge--compact .session-status-dot {
+  width: 100%;
+  height: 100%;
+}
+
+.session-status-badge--compact .session-status-label,
+.session-status-badge--compact .session-status-meta {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.session-status-badge--compact:hover,
+.session-status-badge--compact:focus-within {
+  display: block;
+  min-width: 210px;
+  width: auto;
+  height: auto;
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.session-status-badge--compact:hover .session-status-dot,
+.session-status-badge--compact:focus-within .session-status-dot {
+  width: 8px;
+  height: 8px;
+}
+
+.session-status-badge--compact:hover .session-status-title,
+.session-status-badge--compact:focus-within .session-status-title {
+  gap: 8px;
+}
+
+.session-status-badge--compact:hover .session-status-label,
+.session-status-badge--compact:hover .session-status-meta,
+.session-status-badge--compact:focus-within .session-status-label,
+.session-status-badge--compact:focus-within .session-status-meta {
+  opacity: 1;
+  width: auto;
+  height: auto;
+}
+
 .session-status-badge--saved {
   color: #e8fff0;
-  background: #1f7a47;
-  border: 1px solid #2ea25f;
+  background: #16a34a;
+  border: 1px solid #16a34a;
 }
 
 .session-status-badge--unsaved {
