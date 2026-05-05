@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { useEditorMaybe } from '@grapesjs/react';
 import type { Editor, Page } from 'grapesjs';
+import { useLoading } from './useLoading';
 import { sanitizeMjmlMarkup } from '../utils/mjml';
 import { convertCurrentMjmlToHtml, type HtmlExportProfile } from '../utils/mjmlConversion';
 import {
@@ -26,6 +27,17 @@ const TAB_SESSION_LEASE_MS = 15 * 1000;
 const TAB_SESSION_HEARTBEAT_MS = 5 * 1000;
 const SHOW_JSON_ACTIONS = false;
 const SHOW_RECENT_ACTIVITY = false;
+
+const waitForUiFrame = () =>
+  new Promise<void>((resolve) => {
+    if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+      setTimeout(resolve, 0);
+      return;
+    }
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => resolve());
+    });
+  });
 
 const createTabSessionId = () => {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -276,6 +288,7 @@ export interface TemplatesPanelProps {
 
 export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   const editor = useEditorMaybe();
+  const { show } = useLoading();
   const tabOwnerTokenRef = useRef(createTabSessionId());
   const tabSessionIdRef = useRef(getTabSessionId(tabOwnerTokenRef.current));
   const scopedSessionKeyRef = useRef(buildLocalSessionKey(tabSessionIdRef.current));
@@ -660,12 +673,22 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     void (async () => {
       const stored = await loadStoredSession();
       if (stored) {
-        restoreStoredSession(stored);
+        const release = show(
+          'Restoring last session…',
+          'Applying your saved draft from this browser tab.',
+        );
+        try {
+          await waitForUiFrame();
+          await waitForUiFrame();
+          restoreStoredSession(stored);
+        } finally {
+          release();
+        }
         return;
       }
       initializeFreshSessionState();
     })();
-  }, [editor, initializeFreshSessionState, loadStoredSession, restoreStoredSession]);
+  }, [editor, initializeFreshSessionState, loadStoredSession, restoreStoredSession, show]);
 
   useEffect(() => {
     if (!editor) {
@@ -992,6 +1015,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
         return;
       }
       setActiveRemoteTemplateId(template.id);
+      const releaseLoading = show('Loading template…', template.name);
       try {
         const response = await fetch(`/api/templates/${encodeURIComponent(template.id)}`);
         const payload = (await response.json().catch(() => null)) as
@@ -1006,6 +1030,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
           return;
         }
 
+        await waitForUiFrame();
         const applied = applyMjmlToEditor(payload.mjml);
         if (!applied) {
           showToast('Selected template does not contain a valid <mjml> root element.');
@@ -1023,10 +1048,11 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
         console.error('Failed to load remote template.', error);
         showToast('Failed to load selected template.');
       } finally {
+        releaseLoading();
         setActiveRemoteTemplateId(null);
       }
     },
-    [applyMjmlToEditor, closeTemplatesLibraryModal, editor, notifyEditorNotReady, showToast, updateRecents],
+    [applyMjmlToEditor, closeTemplatesLibraryModal, editor, notifyEditorNotReady, show, showToast, updateRecents],
   );
 
   const handleUploadTemplateFileChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
@@ -1212,7 +1238,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
         showToast('Failed to read the selected MJML file.');
         input.value = '';
       };
-      reader.onload = () => {
+      reader.onload = async () => {
         input.value = '';
         const result = reader.result;
         if (typeof result !== 'string') {
@@ -1220,7 +1246,9 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
           return;
         }
 
+        const releaseLoading = show('Importing MJML file…', file.name);
         try {
+          await waitForUiFrame();
           const applied = applyMjmlToEditor(result);
           if (!applied) {
             showToast('The selected file does not contain a valid <mjml> root element.');
@@ -1236,12 +1264,14 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
         } catch (error) {
           console.error(error);
           showToast('Failed to import the MJML template.');
+        } finally {
+          releaseLoading();
         }
       };
 
       reader.readAsText(file);
     },
-    [applyMjmlToEditor, editor, notifyEditorNotReady, saveSessionToLocal, showToast, updateRecents],
+    [applyMjmlToEditor, editor, notifyEditorNotReady, saveSessionToLocal, show, showToast, updateRecents],
   );
 
   const handleTriggerSessionImport = useCallback(() => {
@@ -1273,7 +1303,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
         showToast('Failed to read the selected session file.');
         input.value = '';
       };
-      reader.onload = () => {
+      reader.onload = async () => {
         input.value = '';
         const result = reader.result;
         if (typeof result !== 'string') {
@@ -1281,7 +1311,9 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
           return;
         }
 
+        const releaseLoading = show('Importing session…', file.name);
         try {
+          await waitForUiFrame();
           const projectData = JSON.parse(result) as Parameters<Editor['loadProjectData']>[0];
           editor.loadProjectData(projectData);
           const pages = editor.Pages.getAll();
@@ -1294,12 +1326,14 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
         } catch (error) {
           console.error(error);
           showToast('Invalid session JSON file.');
+        } finally {
+          releaseLoading();
         }
       };
 
       reader.readAsText(file);
     },
-    [editor, notifyEditorNotReady, showToast, updateRecents],
+    [editor, notifyEditorNotReady, show, showToast, updateRecents],
   );
 
   const handleExportMjml = useCallback(() => {
@@ -1362,39 +1396,45 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
           return;
         }
 
-        if (sessionKey !== scopedSessionKey) {
-          const restoredPayload = serializeLocalSession(stored.mjml, stored.savedAt, {
-            projectName: stored.projectName,
-            projectVersion: stored.projectVersion,
-            versionFingerprint: stored.versionFingerprint,
-          });
-          try {
-            window.localStorage.setItem(scopedSessionKey, restoredPayload);
+        const displayName = stored.projectName?.trim() || 'Untitled project';
+        const releaseLoading = show('Restoring session…', displayName);
+        try {
+          if (sessionKey !== scopedSessionKey) {
+            const restoredPayload = serializeLocalSession(stored.mjml, stored.savedAt, {
+              projectName: stored.projectName,
+              projectVersion: stored.projectVersion,
+              versionFingerprint: stored.versionFingerprint,
+            });
             try {
-              await clearSessionFromIndexedDb(scopedSessionKey);
+              window.localStorage.setItem(scopedSessionKey, restoredPayload);
+              try {
+                await clearSessionFromIndexedDb(scopedSessionKey);
+              } catch {
+                // Ignore cleanup failures when localStorage already has the payload.
+              }
+            } catch (error) {
+              if (!isQuotaExceededError(error)) {
+                throw error;
+              }
+              await writeSessionToIndexedDb(scopedSessionKey, restoredPayload);
+              window.localStorage.removeItem(scopedSessionKey);
+            }
+            window.localStorage.removeItem(sessionKey);
+            try {
+              await clearSessionFromIndexedDb(sessionKey);
             } catch {
-              // Ignore cleanup failures when localStorage already has the payload.
+              // Ignore cleanup failures for source key migration.
             }
-          } catch (error) {
-            if (!isQuotaExceededError(error)) {
-              throw error;
-            }
-            await writeSessionToIndexedDb(scopedSessionKey, restoredPayload);
-            window.localStorage.removeItem(scopedSessionKey);
           }
-          window.localStorage.removeItem(sessionKey);
-          try {
-            await clearSessionFromIndexedDb(sessionKey);
-          } catch {
-            // Ignore cleanup failures for source key migration.
-          }
-        }
 
-        restoreStoredSession(stored);
-        setFreshTemplateFingerprint(null);
-        setAutosaveEnabled(true);
-        reconcileAutosavedSessions();
-        setToastMessage('Autosaved session restored.');
+          restoreStoredSession(stored);
+          setFreshTemplateFingerprint(null);
+          setAutosaveEnabled(true);
+          reconcileAutosavedSessions();
+          setToastMessage('Autosaved session restored.');
+        } finally {
+          releaseLoading();
+        }
       } finally {
         setActiveAutosavedSessionKey(null);
       }
@@ -1406,6 +1446,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
       reconcileAutosavedSessions,
       restoreStoredSession,
       scopedSessionKey,
+      show,
     ],
   );
 

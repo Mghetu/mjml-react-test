@@ -1,5 +1,7 @@
 // src/editor/Editor.tsx
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
+import LoadingProvider from './components/LoadingProvider';
+import { useLoading } from './components/useLoading';
 import grapesjs, { type Component as GjsComponent, type Editor as GrapesEditor } from 'grapesjs';
 import GjsEditor, { Canvas, WithEditor } from '@grapesjs/react';
 import mjmlPlugin from 'grapesjs-mjml';
@@ -21,8 +23,23 @@ import { fixMjWrapper } from './patches/fixMjWrapper';
 import 'grapesjs/dist/css/grapes.min.css';
 import './editor.css';
 
-export default function Editor() {
+function EditorInner() {
   const editorRef = useRef<GrapesEditor | null>(null);
+  const editorLoadingReleaseRef = useRef<(() => void) | null>(null);
+  const { show } = useLoading();
+
+  useLayoutEffect(() => {
+    if (!editorLoadingReleaseRef.current) {
+      editorLoadingReleaseRef.current = show(
+        'Loading editor…',
+        'Preparing the MJML canvas. This can take a few seconds for large templates.',
+      );
+    }
+    return () => {
+      editorLoadingReleaseRef.current?.();
+      editorLoadingReleaseRef.current = null;
+    };
+  }, [show]);
 
   useEffect(() => {
     return () => {
@@ -35,6 +52,13 @@ export default function Editor() {
   }, []);
 
   const handleEditorReady = useCallback((editor: GrapesEditor) => {
+    if (!editorLoadingReleaseRef.current) {
+      editorLoadingReleaseRef.current = show(
+        'Loading editor…',
+        'Preparing the MJML canvas. This can take a few seconds for large templates.',
+      );
+    }
+
     editorRef.current = editor;
 
      // ✅ APPLY THE PATCH ASAP (safe to call multiple times) my_IMPORT one line
@@ -555,6 +579,9 @@ const initialTemplate = [
 
         // Re-inject on frame updates (when canvas reloads)
         editor.on('frame:load', injectCanvasStyles);
+
+        editorLoadingReleaseRef.current?.();
+        editorLoadingReleaseRef.current = null;
       }, 100);
 
       allowStarterTemplateInjection = false;
@@ -668,7 +695,7 @@ const initialTemplate = [
     });
 
     console.log('Available blocks after adding mj-group:', editor.BlockManager.getAll().length);
-  }, []);
+  }, [show]);
 
   return (
     <GjsEditor
@@ -712,5 +739,13 @@ const initialTemplate = [
         </div>
       </div>
     </GjsEditor>
+  );
+}
+
+export default function Editor() {
+  return (
+    <LoadingProvider>
+      <EditorInner />
+    </LoadingProvider>
   );
 }
