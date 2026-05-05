@@ -124,6 +124,34 @@ interface AutosavedSessionItem {
   savedAt: number;
 }
 
+const listAutosavedSessionsFromLocalStorage = (): AutosavedSessionItem[] => {
+  if (typeof window === 'undefined') {
+    return [];
+  }
+
+  const items: AutosavedSessionItem[] = [];
+  for (let i = 0; i < window.localStorage.length; i += 1) {
+    const key = window.localStorage.key(i);
+    if (!key || !key.startsWith(`${LOCAL_SESSION_KEY_PREFIX}:tab:`)) {
+      continue;
+    }
+    const raw = window.localStorage.getItem(key);
+    const parsed = parseLocalSession(raw);
+    if (!parsed) {
+      continue;
+    }
+    items.push({
+      key,
+      tabSessionId: key.slice(`${LOCAL_SESSION_KEY_PREFIX}:tab:`.length),
+      projectName: parsed.projectName,
+      savedAt: parsed.savedAt,
+    });
+  }
+
+  items.sort((a, b) => b.savedAt - a.savedAt);
+  return items;
+};
+
 type SessionModalKind = 'end-session' | null;
 type ProjectActionKind = 'download-mjml' | 'export-html' | 'manual-save' | 'load-template' | null;
 type LibraryTemplatesModalKind = 'select-template' | 'upload-template' | null;
@@ -359,33 +387,15 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
     }
   }, []);
 
-  const refreshAutosavedSessions = useCallback(() => {
-    if (typeof window === 'undefined') {
-      setAutosavedSessions([]);
-      return;
-    }
-
-    const items: AutosavedSessionItem[] = [];
-    for (let i = 0; i < window.localStorage.length; i += 1) {
-      const key = window.localStorage.key(i);
-      if (!key || !key.startsWith(`${LOCAL_SESSION_KEY_PREFIX}:tab:`)) {
-        continue;
-      }
-      const raw = window.localStorage.getItem(key);
-      const parsed = parseLocalSession(raw);
-      if (!parsed) {
-        continue;
-      }
-      items.push({
-        key,
-        tabSessionId: key.slice(`${LOCAL_SESSION_KEY_PREFIX}:tab:`.length),
-        projectName: parsed.projectName,
-        savedAt: parsed.savedAt,
-      });
-    }
-
-    items.sort((a, b) => b.savedAt - a.savedAt);
+  const reconcileAutosavedSessions = useCallback(() => {
+    const items = listAutosavedSessionsFromLocalStorage();
     setAutosavedSessions(items);
+    setActiveAutosavedSessionKey((current) => {
+      if (!current) {
+        return current;
+      }
+      return items.some((item) => item.key === current) ? current : null;
+    });
   }, []);
 
   const saveSessionToLocal = useCallback(
@@ -446,7 +456,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
               : 'Session saved locally.',
           );
         }
-        refreshAutosavedSessions();
+        reconcileAutosavedSessions();
 
         return true;
       };
@@ -463,7 +473,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
         return false;
       });
     },
-    [editor, projectName, projectVersion, refreshAutosavedSessions, scopedSessionKey, versionFingerprint],
+    [editor, projectName, projectVersion, reconcileAutosavedSessions, scopedSessionKey, versionFingerprint],
   );
 
   const applyMjmlToEditor = useCallback(
@@ -565,12 +575,40 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   }, [editor]);
 
   useEffect(() => {
-    void purgeExpiredLocalSessions();
-  }, []);
+    void (async () => {
+      await purgeExpiredLocalSessions();
+      reconcileAutosavedSessions();
+    })();
+  }, [reconcileAutosavedSessions]);
 
   useEffect(() => {
-    refreshAutosavedSessions();
-  }, [refreshAutosavedSessions]);
+    reconcileAutosavedSessions();
+  }, [reconcileAutosavedSessions]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const handleStorageOrFocusSync = () => {
+      reconcileAutosavedSessions();
+    };
+    const handleVisibilitySync = () => {
+      if (document.visibilityState === 'visible') {
+        reconcileAutosavedSessions();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageOrFocusSync);
+    window.addEventListener('focus', handleStorageOrFocusSync);
+    document.addEventListener('visibilitychange', handleVisibilitySync);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageOrFocusSync);
+      window.removeEventListener('focus', handleStorageOrFocusSync);
+      document.removeEventListener('visibilitychange', handleVisibilitySync);
+    };
+  }, [reconcileAutosavedSessions]);
 
   useEffect(() => {
     const tabSessionId = tabSessionIdRef.current;
@@ -1319,7 +1357,7 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
         const stored = await loadStoredSessionByKey(sessionKey);
         if (!stored) {
           setToastMessage('Selected autosaved session is no longer available.');
-          refreshAutosavedSessions();
+          reconcileAutosavedSessions();
           return;
         }
 
@@ -1354,13 +1392,20 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
         restoreStoredSession(stored);
         setFreshTemplateFingerprint(null);
         setAutosaveEnabled(true);
-        refreshAutosavedSessions();
+        reconcileAutosavedSessions();
         setToastMessage('Autosaved session restored.');
       } finally {
         setActiveAutosavedSessionKey(null);
       }
     },
-    [editor, loadStoredSessionByKey, notifyEditorNotReady, refreshAutosavedSessions, restoreStoredSession, scopedSessionKey],
+    [
+      editor,
+      loadStoredSessionByKey,
+      notifyEditorNotReady,
+      reconcileAutosavedSessions,
+      restoreStoredSession,
+      scopedSessionKey,
+    ],
   );
 
   const filteredRemoteTemplates = useMemo(() => {
@@ -1389,11 +1434,12 @@ export default function TemplatesPanel({ isVisible }: TemplatesPanelProps) {
   const confirmEndSession = useCallback(() => {
     window.localStorage.removeItem(scopedSessionKey);
     void clearSessionFromIndexedDb(scopedSessionKey);
+    reconcileAutosavedSessions();
     setSavedFingerprint(null);
     setLastAutosaveAt(null);
     setSessionModal(null);
     window.location.reload();
-  }, [scopedSessionKey]);
+  }, [reconcileAutosavedSessions, scopedSessionKey]);
 
   const cancelProjectNameModal = useCallback(() => {
     setProjectNameModalAction(null);
