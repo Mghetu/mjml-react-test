@@ -22,6 +22,83 @@ const jsonHeaders = {
   'Content-Type': 'application/json; charset=utf-8',
 };
 
+const OUTLOOK_SAFE_IMAGE_STYLES = [
+  'display:block',
+  'border:0',
+  'outline:none',
+  'text-decoration:none',
+  '-ms-interpolation-mode:bicubic',
+];
+
+const OUTLOOK_SAFE_ANCHOR_STYLES = [
+  'text-decoration:none',
+  'border:0',
+];
+
+const mergeInlineStyles = (existingStyle, requiredStyles) => {
+  const styleMap = new Map();
+  const pushPair = (pair) => {
+    const [rawKey, ...rest] = pair.split(':');
+    if (!rawKey || rest.length === 0) {
+      return;
+    }
+    const key = rawKey.trim().toLowerCase();
+    const value = rest.join(':').trim();
+    if (!key || !value) {
+      return;
+    }
+    styleMap.set(key, value);
+  };
+
+  String(existingStyle || '')
+    .split(';')
+    .forEach((entry) => pushPair(entry));
+  requiredStyles.forEach((entry) => pushPair(entry));
+
+  return Array.from(styleMap.entries())
+    .map(([key, value]) => `${key}:${value}`)
+    .join(';');
+};
+
+const upsertTagAttribute = (tag, attributeName, attributeValue) => {
+  const attrRegex = new RegExp(`\\s${attributeName}\\s*=\\s*(["'])(.*?)\\1`, 'i');
+  if (attrRegex.test(tag)) {
+    return tag.replace(attrRegex, ` ${attributeName}="${
+      typeof attributeValue === 'function'
+        ? attributeValue(tag.match(attrRegex)?.[2] || '')
+        : attributeValue
+    }"`);
+  }
+
+  return tag.replace(/\/?>$/, (suffix) => ` ${attributeName}="${
+    typeof attributeValue === 'function' ? attributeValue('') : attributeValue
+  }"${suffix}`);
+};
+
+export const hardenExportedHtmlForOutlook = (html) => {
+  if (typeof html !== 'string' || html.length === 0) {
+    return html;
+  }
+
+  let hardened = html.replace(/<img\b[^>]*>/gi, (imgTag) => {
+    let nextTag = upsertTagAttribute(imgTag, 'border', '0');
+    nextTag = upsertTagAttribute(nextTag, 'style', (existingStyle) =>
+      mergeInlineStyles(existingStyle, OUTLOOK_SAFE_IMAGE_STYLES),
+    );
+    return nextTag;
+  });
+
+  hardened = hardened.replace(/<a\b[^>]*>\s*<img\b[^>]*>\s*<\/a>/gi, (linkedImageBlock) => {
+    return linkedImageBlock.replace(/<a\b[^>]*>/i, (anchorTag) =>
+      upsertTagAttribute(anchorTag, 'style', (existingStyle) =>
+        mergeInlineStyles(existingStyle, OUTLOOK_SAFE_ANCHOR_STYLES),
+      ),
+    );
+  });
+
+  return hardened;
+};
+
 const EXPORT_PROFILES = {
   'email-safe': {
     optimizeRemoteImages: false,
@@ -269,8 +346,10 @@ export const handler = async (event) => {
     });
   }
 
+  const hardenedHtmlOutput = hardenExportedHtmlForOutlook(htmlOutput);
+
   return createResponse(200, {
-    html: htmlOutput,
+    html: hardenedHtmlOutput,
     optimizedMjml,
     profile: profileKey,
     warnings,
