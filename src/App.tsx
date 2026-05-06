@@ -1,8 +1,9 @@
 // src/App.tsx
 import type { FormEvent } from 'react';
-import { useEffect, useMemo, useState } from 'react';
-import Editor from './editor/Editor';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import './App.css';
+
+const Editor = lazy(() => import('./editor/Editor'));
 
 type AuthState = 'checking' | 'authenticated' | 'unauthenticated';
 
@@ -109,5 +110,18 @@ export default function App() {
     );
   }
 
-  return <Editor />;
+  return (
+    <Suspense
+      fallback={
+        <main className="auth-screen">
+          <section className="auth-card">
+            <h1>Loading editor</h1>
+            <p>Preparing the editor UI...</p>
+          </section>
+        </main>
+      }
+    >
+      <Editor />
+    </Suspense>
+  );
 }
